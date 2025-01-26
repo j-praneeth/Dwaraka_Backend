@@ -22,6 +22,48 @@
 
 // export default foodRouter;
 
+import express from "express"
+import { addFood, listFood, removeFood } from "../controllers/foodController.js"
+import multer from "multer"
+import authMiddleware from "../middleware/auth.js"
+import path from "path"
+
+const foodRouter = express.Router()
+
+// Image Storage Engine
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/")
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname))
+  },
+})
+
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif/
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase())
+    const mimetype = filetypes.test(file.mimetype)
+    if (extname && mimetype) {
+      return cb(null, true)
+    } else {
+      cb("Error: Images Only!")
+    }
+  },
+})
+
+// Update the routes
+foodRouter.post("/add", upload.single("image"), authMiddleware, addFood)
+foodRouter.get("/list", listFood)
+foodRouter.post("/remove", authMiddleware, removeFood)
+
+export default foodRouter
+
+
+
 
 // import express from "express";
 // import { addFood, listFood, removeFood } from "../controllers/foodController.js";
@@ -130,49 +172,3 @@
 // foodRouter.post("/remove", authMiddleware, removeFood);
 
 // export default foodRouter;
-
-
-
-const express = require("express");
-const { addFood, listFood, removeFood } = require("../controllers/foodController");
-const authMiddleware = require("../middleware/auth");
-const multer = require("multer");
-const uploadRouter = require("./uploadrouter");
-
-const router = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-router.use("/upload", uploadRouter);
-
-router.post("/add", upload.single("image"), authMiddleware, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No image file uploaded" });
-    }
-
-    const formData = new FormData();
-    formData.append("image", req.file.buffer, { filename: req.file.originalname });
-
-    const response = await fetch(`${process.env.BACKEND_URL}/api/upload`, {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Image upload failed");
-    }
-
-    req.body.imageUrl = data.imageUrl;
-    await addFood(req, res);
-  } catch (error) {
-    console.error("File upload error:", error);
-    res.status(500).json({ error: error.message || "File upload failed" });
-  }
-});
-
-router.get("/list", listFood);
-router.post("/remove", authMiddleware, removeFood);
-
-module.exports = router; // <-- Ensure CommonJS export
