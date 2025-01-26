@@ -22,18 +22,26 @@
 
 // export default foodRouter;
 
+
 import express from "express"
 import { addFood, listFood, removeFood } from "../controllers/foodController.js"
 import multer from "multer"
 import authMiddleware from "../middleware/auth.js"
 import path from "path"
+import fs from "fs"
 
 const foodRouter = express.Router()
+
+// Ensure upload directory exists
+const uploadDir = "uploads/"
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
 
 // Image Storage Engine
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/")
+    cb(null, uploadDir)
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
@@ -50,13 +58,30 @@ const upload = multer({
     if (extname && mimetype) {
       return cb(null, true)
     } else {
-      cb("Error: Images Only!")
+      cb(new Error("Error: Images Only!"))
     }
   },
-})
+}).single("image")
 
 // Update the routes
-foodRouter.post("/add", upload.single("image"), authMiddleware, addFood)
+foodRouter.post("/add", authMiddleware, (req, res) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error("Multer error:", err)
+      return res.status(500).json({ message: "File upload error", error: err.message })
+    } else if (err) {
+      console.error("Unknown error:", err)
+      return res.status(500).json({ message: "Unknown error", error: err.message })
+    }
+
+    // If file upload is successful, proceed with adding food
+    addFood(req, res).catch((error) => {
+      console.error("Error in addFood:", error)
+      res.status(500).json({ message: "Error adding food", error: error.message })
+    })
+  })
+})
+
 foodRouter.get("/list", listFood)
 foodRouter.post("/remove", authMiddleware, removeFood)
 
@@ -64,111 +89,43 @@ export default foodRouter
 
 
 
+// import express from "express"
+// import { addFood, listFood, removeFood } from "../controllers/foodController.js"
+// import multer from "multer"
+// import authMiddleware from "../middleware/auth.js"
+// import path from "path"
 
-// import express from "express";
-// import { addFood, listFood, removeFood } from "../controllers/foodController.js";
-// import multer from "multer";
-// import cloudinary from "cloudinary";
-// import authMiddleware from "../middleware/auth.js";
-// import streamifier from "streamifier"; // Required for buffer uploads
+// const foodRouter = express.Router()
 
-// const foodRouter = express.Router();
+// // Image Storage Engine
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "uploads/")
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9)
+//     cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname))
+//   },
+// })
 
-// // Cloudinary Configuration
-// cloudinary.v2.config({
-//     cloud_name: process.env.CLOUD_NAME,
-//     api_key: process.env.CLOUD_API_KEY,
-//     api_secret: process.env.CLOUD_API_SECRET,
-// });
-
-// // Use Memory Storage for Multer
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage: storage });
-
-// // Handle Image Upload and Call addFood
-// foodRouter.post("/add", upload.single("image"), authMiddleware, async (req, res) => {
-//     try {
-//         if (!req.file) {
-//             return res.status(400).json({ error: "No image file uploaded" });
-//         }
-
-//         // Upload image to Cloudinary
-//         const streamUpload = (req) => {
-//             return new Promise((resolve, reject) => {
-//                 let stream = cloudinary.v2.uploader.upload_stream(
-//                     { resource_type: "image", folder: "dwaraka_handlooms" }, // Save in Cloudinary folder
-//                     (error, result) => {
-//                         if (result) {
-//                             resolve(result);
-//                         } else {
-//                             reject(error);
-//                         }
-//                     }
-//                 );
-//                 streamifier.createReadStream(req.file.buffer).pipe(stream);
-//             });
-//         };
-
-//         const result = await streamUpload(req);
-        
-//         // Now call addFood with the image URL
-//         req.body.imageUrl = result.secure_url; // Pass the Cloudinary URL in request body
-//         await addFood(req, res); // Call the addFood controller function
-
-//     } catch (error) {
-//         console.error("File upload error:", error);
-//         res.status(500).json({ error: "File upload failed" });
+// const upload = multer({
+//   storage: storage,
+//   fileFilter: (req, file, cb) => {
+//     const filetypes = /jpeg|jpg|png|gif/
+//     const extname = filetypes.test(path.extname(file.originalname).toLowerCase())
+//     const mimetype = filetypes.test(file.mimetype)
+//     if (extname && mimetype) {
+//       return cb(null, true)
+//     } else {
+//       cb("Error: Images Only!")
 //     }
-// });
+//   },
+// })
 
-// // Other Routes
-// foodRouter.get("/list", listFood);
-// foodRouter.post("/remove", authMiddleware, removeFood);
+// // Update the routes
+// foodRouter.post("/add", upload.single("image"), authMiddleware, addFood)
+// foodRouter.get("/list", listFood)
+// foodRouter.post("/remove", authMiddleware, removeFood)
 
-// export default foodRouter;
+// export default foodRouter
 
-
-// import express from "express";
-// import { addFood, listFood, removeFood } from "../controllers/foodController.js";
-// import authMiddleware from "../middleware/auth.js";
-// import multer from "multer";
-
-// const foodRouter = express.Router();
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage: storage });
-
-// foodRouter.post("/add", upload.single("image"), authMiddleware, async (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({ error: "No image file uploaded" });
-//     }
-
-//     // Send image to the upload API first
-//     const formData = new FormData();
-//     formData.append("image", req.file.buffer, { filename: req.file.originalname });
-
-//     const response = await fetch(`${process.env.BACKEND_URL}/api/upload`, {
-//       method: "POST",
-//       body: formData,
-//     });
-
-//     const data = await response.json();
-//     if (!response.ok) {
-//       throw new Error(data.error || "Image upload failed");
-//     }
-
-//     // Pass imageUrl to addFood controller
-//     req.body.imageUrl = data.imageUrl;
-//     await addFood(req, res);
-    
-//   } catch (error) {
-//     console.error("File upload error:", error);
-//     res.status(500).json({ error: error.message || "File upload failed" });
-//   }
-// });
-
-// // Other routes
-// foodRouter.get("/list", listFood);
-// foodRouter.post("/remove", authMiddleware, removeFood);
-
-// export default foodRouter;
