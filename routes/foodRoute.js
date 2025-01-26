@@ -1,26 +1,26 @@
-import express from "express";
-import { addFood, listFood, removeFood } from "../controllers/foodController.js";
-import multer from "multer";
-import authMiddleware from "../middleware/auth.js";
+// import express from "express";
+// import { addFood, listFood, removeFood } from "../controllers/foodController.js";
+// import multer from "multer";
+// import authMiddleware from "../middleware/auth.js";
 
-const foodRouter = express.Router();
+// const foodRouter = express.Router();
 
-// Image Storage Engine
+// // Image Storage Engine
 
-const storage= multer.diskStorage({
-    destination:"uploads",
-    filename:(req,file,cb)=>{
-        return cb(null,`${Date.now()}${file.originalname}`)
-    }
-})
+// const storage= multer.diskStorage({
+//     destination:"uploads",
+//     filename:(req,file,cb)=>{
+//         return cb(null,`${Date.now()}${file.originalname}`)
+//     }
+// })
 
-const upload= multer({storage:storage})
+// const upload= multer({storage:storage})
 
-foodRouter.post("/add",upload.single("image"),authMiddleware,addFood);
-foodRouter.get("/list",listFood);
-foodRouter.post("/remove",authMiddleware,removeFood);
+// foodRouter.post("/add",upload.single("image"),authMiddleware,addFood);
+// foodRouter.get("/list",listFood);
+// foodRouter.post("/remove",authMiddleware,removeFood);
 
-export default foodRouter;
+// export default foodRouter;
 
 
 // import express from "express";
@@ -84,3 +84,50 @@ export default foodRouter;
 // foodRouter.post("/remove", authMiddleware, removeFood);
 
 // export default foodRouter;
+
+
+import express from "express";
+import { addFood, listFood, removeFood } from "../controllers/foodController.js";
+import authMiddleware from "../middleware/auth.js";
+import multer from "multer";
+
+const foodRouter = express.Router();
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+foodRouter.post("/add", upload.single("image"), authMiddleware, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file uploaded" });
+    }
+
+    // Send image to the upload API first
+    const formData = new FormData();
+    formData.append("image", req.file.buffer, { filename: req.file.originalname });
+
+    const response = await fetch(`${process.env.BACKEND_URL}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Image upload failed");
+    }
+
+    // Pass imageUrl to addFood controller
+    req.body.imageUrl = data.imageUrl;
+    await addFood(req, res);
+    
+  } catch (error) {
+    console.error("File upload error:", error);
+    res.status(500).json({ error: error.message || "File upload failed" });
+  }
+});
+
+// Other routes
+foodRouter.get("/list", listFood);
+foodRouter.post("/remove", authMiddleware, removeFood);
+
+export default foodRouter;
