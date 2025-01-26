@@ -87,6 +87,10 @@ const addFood = async (req, res) => {
       await food.save()
       res.status(201).json({ success: true, message: "Food Added" })
     } else {
+      // If user is not admin, delete the uploaded file
+      fs.unlink(path.join(process.cwd(), "tmp", "uploads", image_filename), (err) => {
+        if (err) console.error("Error deleting file:", err)
+      })
       res.status(403).json({ success: false, message: "You are not admin" })
     }
   } catch (error) {
