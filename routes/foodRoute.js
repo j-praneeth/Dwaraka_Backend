@@ -33,9 +33,13 @@ import fs from "fs"
 const foodRouter = express.Router()
 
 // Ensure upload directory exists
-const uploadDir = "uploads/"
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true })
+const uploadDir = path.join(process.cwd(), "uploads")
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true })
+  }
+} catch (err) {
+  console.error(`Error creating upload directory: ${err.message}`)
 }
 
 // Image Storage Engine
@@ -86,6 +90,7 @@ foodRouter.get("/list", listFood)
 foodRouter.post("/remove", authMiddleware, removeFood)
 
 export default foodRouter
+
 
 
 
