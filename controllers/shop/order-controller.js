@@ -336,9 +336,232 @@ const getOrderDetails = async (req, res) => {
   }
 };
 
+const updateOrderTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, location, trackingId, courierName } = req.body;
+
+    // Validate input
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required"
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Update tracking info
+    order.trackingInfo = {
+      status,
+      location: location || order.trackingInfo?.location,
+      updatedAt: new Date(),
+      trackingId: trackingId || order.trackingInfo?.trackingId,
+      courierName: courierName || order.trackingInfo?.courierName
+    };
+
+    // Update order status based on tracking status
+    if (status === 'shipped') {
+      order.orderStatus = 'shipped';
+    } else if (status === 'delivered') {
+      order.orderStatus = 'delivered';
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order tracking updated successfully",
+      data: order
+    });
+
+  } catch (error) {
+    console.error('Error updating order tracking:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order tracking",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// Request a return
+const requestReturn = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason, description, images } = req.body;
+
+    // Validate input
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Return reason is required"
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    
+    // Validate order exists and belongs to user
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    if (order.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: Not your order"
+      });
+    }
+
+    // Check if return is possible (e.g., within 7 days of delivery)
+    const deliveryDate = order.trackingInfo?.updatedAt;
+    if (!deliveryDate || Date.now() - deliveryDate > 7 * 24 * 60 * 60 * 1000) {
+      return res.status(400).json({
+        success: false,
+        message: "Return window has expired (7 days from delivery)"
+      });
+    }
+
+    // Create return request
+    order.returnRequest = {
+      status: 'pending',
+      reason,
+      description,
+      images: images || [],
+      requestDate: new Date(),
+      pickupAddress: order.addressInfo // Default to delivery address
+    };
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Return request submitted successfully",
+      data: order
+    });
+
+  } catch (error) {
+    console.error('Return request error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit return request",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// Process return request (Admin only)
+const processReturnRequest = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, refundAmount, pickupDate, courierName, trackingId } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order || !order.returnRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Order or return request not found"
+      });
+    }
+
+    // Update return request
+    order.returnRequest.status = status;
+    order.returnRequest.processedDate = new Date();
+    
+    if (status === 'approved') {
+      order.returnRequest.refundAmount = refundAmount;
+      order.returnRequest.pickupDate = pickupDate;
+      order.returnRequest.returnTrackingInfo = {
+        status: 'pickup_scheduled',
+        courierName,
+        trackingId,
+        updatedAt: new Date()
+      };
+      order.orderStatus = 'returned';
+    } else if (status === 'rejected') {
+      order.orderStatus = 'delivered'; // Revert to delivered status
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Return request ${status}`,
+      data: order
+    });
+
+  } catch (error) {
+    console.error('Process return error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to process return request",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// Update return tracking
+const updateReturnTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, location } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order || !order.returnRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Order or return request not found"
+      });
+    }
+
+    order.returnRequest.returnTrackingInfo = {
+      ...order.returnRequest.returnTrackingInfo,
+      status,
+      location,
+      updatedAt: new Date()
+    };
+
+    if (status === 'delivered_to_warehouse') {
+      // Process refund
+      order.orderStatus = 'refunded';
+      order.returnRequest.status = 'completed';
+      // Here you would integrate with Razorpay refund API
+    }
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Return tracking updated",
+      data: order
+    });
+
+  } catch (error) {
+    console.error('Update return tracking error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update return tracking",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
   getAllOrdersByUser,
   getOrderDetails,
+  updateOrderTracking,
+  requestReturn,
+  processReturnRequest,
+  updateReturnTracking
 };

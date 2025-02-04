@@ -7,6 +7,10 @@ const {
   getAllOrdersByUser,
   getOrderDetails,
   capturePayment,
+  updateOrderTracking,
+  requestReturn,
+  processReturnRequest,
+  updateReturnTracking
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
@@ -18,6 +22,14 @@ router.post("/create", createOrder);
 router.post("/capture", capturePayment);
 router.get("/user/:userId", getAllOrdersByUser);
 router.get("/details/:id", getOrderDetails);
+
+// Update order tracking - Protected for admin only
+router.put("/tracking/:orderId", updateOrderTracking);
+
+// Return routes
+router.post("/return/:orderId", requestReturn);
+router.put("/return/:orderId/process", processReturnRequest);
+router.put("/return/:orderId/tracking", updateReturnTracking);
 
 // Add a test route for Razorpay credentials
 router.get("/test-razorpay", async (req, res) => {
