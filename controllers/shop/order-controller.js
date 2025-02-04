@@ -288,16 +288,36 @@ const getAllOrdersByUser = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const orders = await Order.find({ userId });
-
-    if (!orders.length) {
-      return res.status(404).json({ success: false, message: "No orders found!" });
+    // Verify that the requesting user is accessing their own orders
+    if (req.user._id.toString() !== userId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Unauthorized: Can only access your own orders" 
+      });
     }
 
-    res.status(200).json({ success: true, data: orders });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({ success: false, message: "Some error occurred!" });
+    const orders = await Order.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate('cartItems.productId', 'title image price'); // Populate product details
+
+    if (!orders.length) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "No orders found!" 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      data: orders 
+    });
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch orders",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 

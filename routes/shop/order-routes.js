@@ -16,7 +16,7 @@ router.use(authMiddleware);
 
 router.post("/create", createOrder);
 router.post("/capture", capturePayment);
-router.get("/list/:userId", getAllOrdersByUser);
+router.get("/user/:userId", getAllOrdersByUser);
 router.get("/details/:id", getOrderDetails);
 
 // Add a test route for Razorpay credentials
