@@ -21,9 +21,40 @@ const createOrder = async (req, res) => {
       });
     }
 
+    // Validate address info
+    if (!addressInfo.address || !addressInfo.city || !addressInfo.pincode || !addressInfo.phone) {
+      return res.status(400).json({
+        success: false,
+        message: "All address fields are required (address, city, pincode, phone)"
+      });
+    }
+
+    // Validate phone number format (basic validation)
+    if (!/^\d{10}$/.test(addressInfo.phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number format. Must be 10 digits"
+      });
+    }
+
+    // Validate pincode format
+    if (!/^\d{6}$/.test(addressInfo.pincode)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pincode format. Must be 6 digits"
+      });
+    }
+
     // Validate products and calculate total
     let calculatedTotal = 0;
     for (const item of cartItems) {
+      if (!item.productId || !item.quantity || !item.price || !item.title) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid cart item data: ${JSON.stringify(item)}`
+        });
+      }
+
       const product = await Product.findById(item.productId);
       
       if (!product) {
@@ -42,36 +73,61 @@ const createOrder = async (req, res) => {
       }
 
       // Verify price matches with current product price
-      if (product.price !== item.price) {
+      if (Number(product.price) !== Number(item.price)) {
         return res.status(400).json({
           success: false,
-          message: `Price mismatch for product: ${product.title}`
+          message: `Price mismatch for product: ${product.title}. Expected: ${product.price}, Got: ${item.price}`
         });
       }
 
-      calculatedTotal += item.price * item.quantity;
+      calculatedTotal += Number(item.price) * item.quantity;
     }
 
     // Verify total amount
-    if (Math.abs(calculatedTotal - totalAmount) > 0.01) { // Using small delta for floating point comparison
+    if (Math.abs(calculatedTotal - totalAmount) > 0.01) {
       return res.status(400).json({
         success: false,
         message: `Total amount mismatch. Expected: ${calculatedTotal}, Received: ${totalAmount}`
       });
     }
 
-    // Create Razorpay order
-    const options = {
-      amount: Math.round(totalAmount * 100), // Amount in paise
-      currency: "INR",
-      receipt: `order_rcpt_${Date.now()}`,
-      notes: {
-        cartId: cartId || '',
-        userId: req.user._id.toString()
+    // Validate cartId if provided
+    if (cartId) {
+      const cart = await Cart.findById(cartId);
+      if (!cart) {
+        return res.status(404).json({
+          success: false,
+          message: "Cart not found"
+        });
       }
-    };
+    }
 
-    const razorpayOrder = await razorpay.orders.create(options);
+    // Create Razorpay order with better error handling
+    let razorpayOrder;
+    try {
+      const options = {
+        amount: Math.round(totalAmount * 100),
+        currency: "INR",
+        receipt: `order_rcpt_${Date.now()}`,
+        notes: {
+          cartId: cartId || '',
+          userId: req.user._id.toString()
+        }
+      };
+
+      razorpayOrder = await razorpay.orders.create(options);
+      
+      if (!razorpayOrder || !razorpayOrder.id) {
+        throw new Error('Failed to create Razorpay order');
+      }
+    } catch (razorpayError) {
+      console.error('Razorpay order creation failed:', razorpayError);
+      return res.status(500).json({
+        success: false,
+        message: "Payment gateway error",
+        error: process.env.NODE_ENV === 'development' ? razorpayError.message : 'Payment service unavailable'
+      });
+    }
 
     // Create order in our database
     const newOrder = new Order({
@@ -80,7 +136,7 @@ const createOrder = async (req, res) => {
       cartItems: cartItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        price: item.price,
+        price: Number(item.price),
         title: item.title
       })),
       addressInfo,
@@ -95,7 +151,6 @@ const createOrder = async (req, res) => {
 
     await newOrder.save();
 
-    // Return the order details needed by frontend
     res.status(201).json({
       success: true,
       data: {
@@ -115,7 +170,8 @@ const createOrder = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to create order",
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
