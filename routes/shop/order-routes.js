@@ -10,7 +10,7 @@ const {
 
 const router = express.Router();
 
-// Protect all order routes with authentication
+// Protect all order routes with authentication.
 router.use(authMiddleware);
 
 router.post("/create", createOrder);
