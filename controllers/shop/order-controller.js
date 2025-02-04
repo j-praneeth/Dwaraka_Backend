@@ -72,11 +72,12 @@ const createOrder = async (req, res) => {
         });
       }
 
-      // Verify price matches with current product price
-      if (Number(product.price) !== Number(item.price)) {
+      // Verify price matches with salePrice (if available) or regular price
+      const validPrice = product.salePrice > 0 ? product.salePrice : product.price;
+      if (Number(validPrice) !== Number(item.price)) {
         return res.status(400).json({
           success: false,
-          message: `Price mismatch for product: ${product.title}. Expected: ${product.price}, Got: ${item.price}`
+          message: `Price mismatch for product: ${product.title}. Expected: ${validPrice}, Got: ${item.price}`
         });
       }
 
