@@ -251,7 +251,10 @@ const getAllOrdersByUser = async (req, res) => {
 
     const orders = await Order.find({ userId })
       .sort({ createdAt: -1 })
-      .populate('cartItems.productId', 'title image price'); // Populate product details
+      .populate({
+        path: 'cartItems.productId',
+        select: 'title image price salePrice' // Added image and salePrice to populated fields
+      });
 
     if (!orders.length) {
       return res.status(404).json({ 
@@ -260,9 +263,23 @@ const getAllOrdersByUser = async (req, res) => {
       });
     }
 
+    // Format the response to include all necessary product details
+    const formattedOrders = orders.map(order => ({
+      ...order.toObject(),
+      cartItems: order.cartItems.map(item => ({
+        ...item,
+        product: {
+          title: item.productId?.title || item.title,
+          image: item.productId?.image || '',
+          price: item.productId?.price || item.price,
+          salePrice: item.productId?.salePrice || 0
+        }
+      }))
+    }));
+
     res.status(200).json({ 
       success: true, 
-      data: orders 
+      data: formattedOrders
     });
   } catch (error) {
     console.error('Error fetching user orders:', error);
@@ -278,16 +295,44 @@ const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const order = await Order.findById(id);
+    const order = await Order.findById(id)
+      .populate({
+        path: 'cartItems.productId',
+        select: 'title image price salePrice'
+      });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found!" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Order not found!" 
+      });
     }
 
-    res.status(200).json({ success: true, data: order });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({ success: false, message: "Some error occurred!" });
+    // Format the response to include product details
+    const formattedOrder = {
+      ...order.toObject(),
+      cartItems: order.cartItems.map(item => ({
+        ...item,
+        product: {
+          title: item.productId?.title || item.title,
+          image: item.productId?.image || '',
+          price: item.productId?.price || item.price,
+          salePrice: item.productId?.salePrice || 0
+        }
+      }))
+    };
+
+    res.status(200).json({ 
+      success: true, 
+      data: formattedOrder 
+    });
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch order details",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 
