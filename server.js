@@ -19,9 +19,15 @@ const commonFeatureRouter = require("./routes/common/feature-routes");
 
 // Connect to MongoDB using the URL from the .env file
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((error) => console.log(error));
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("MongoDB connected successfully"))
+  .catch((error) => {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
+  });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
