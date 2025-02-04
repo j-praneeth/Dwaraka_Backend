@@ -1,4 +1,5 @@
 const express = require("express");
+const { authMiddleware } = require("../../controllers/auth/auth-controller");
 
 const {
   createOrder,
@@ -8,6 +9,9 @@ const {
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
+
+// Protect all order routes with authentication
+router.use(authMiddleware);
 
 router.post("/create", createOrder);
 router.post("/capture", capturePayment);

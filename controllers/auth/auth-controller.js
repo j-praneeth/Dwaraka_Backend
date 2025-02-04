@@ -169,49 +169,67 @@ const registerUser = async (req, res) => {
 
 // Login user
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    const checkUser = await User.findOne({ email });
-    if (!checkUser)
+    const { email, password } = req.body;
+
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "User doesn't exist! Please register first",
+        message: "Please provide email and password"
       });
+    }
 
-    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
-    if (!checkPasswordMatch)
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Incorrect password! Please try again",
+        message: "Invalid credentials"
       });
+    }
 
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Create JWT token
     const token = jwt.sign(
       {
-        id: checkUser._id,
-        role: checkUser.role,
-        email: checkUser.email,
-        userName: checkUser.userName,
+        id: user._id,
+        role: user.role,
+        email: user.email
       },
-      "CLIENT_SECRET_KEY",
-      { expiresIn: "60m" }
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      { expiresIn: "24h" }
     );
 
-    res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
-      success: true,
-      message: "Logged in successfully",
-      user: {
-        email: checkUser.email,
-        role: checkUser.role,
-        id: checkUser._id,
-        userName: checkUser.userName,
-      },
+    // Set secure cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
-  } catch (e) {
-    console.log(e);
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        userName: user.userName
+      },
+      token // Also send token for mobile clients
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: "Some error occurred",
+      message: "Login failed"
     });
   }
 };
@@ -226,21 +244,50 @@ const logoutUser = (req, res) => {
 
 // Middleware to check authentication
 const authMiddleware = async (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token)
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized user!",
-    });
-
   try {
-    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
-    req.user = decoded;
-    next();
+    // Check for Authorization header first
+    const authHeader = req.headers.authorization;
+    let token;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else {
+      // Fallback to cookie
+      token = req.cookies.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required! Please login.",
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "CLIENT_SECRET_KEY");
+      
+      // Fetch user from database to ensure they still exist
+      const user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "User no longer exists",
+        });
+      }
+      
+      req.user = user;
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
   } catch (error) {
-    res.status(401).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
-      message: "Unauthorized user!",
+      message: "Server error in authentication",
     });
   }
 };
