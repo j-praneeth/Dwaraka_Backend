@@ -202,73 +202,78 @@ const capturePayment = async (req, res) => {
     }
 
     // Verify payment signature
-    const body = razorpayOrderId + "|" + razorpayPaymentId;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest("hex");
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest('hex');
 
-    if (expectedSignature !== razorpaySignature) {
+    if (generatedSignature !== razorpaySignature) {
       order.paymentStatus = "failed";
       await order.save();
       return res.status(400).json({
         success: false,
-        message: "Invalid payment signature"
+        message: "Invalid payment signature",
+        debug: {
+          generated: generatedSignature,
+          received: razorpaySignature,
+          orderIdUsed: razorpayOrderId,
+          paymentId: razorpayPaymentId
+        }
       });
     }
 
-    // Verify payment status with Razorpay
-    const payment = await razorpay.payments.fetch(razorpayPaymentId);
-    
-    if (payment.status !== 'captured') {
-      order.paymentStatus = "failed";
-      await order.save();
-      return res.status(400).json({
-        success: false,
-        message: "Payment not captured"
-      });
-    }
-
-    // Update order status
-    order.paymentStatus = "paid";
-    order.orderStatus = "confirmed";
-    order.razorpayPaymentId = razorpayPaymentId;
-    order.razorpaySignature = razorpaySignature;
-    order.orderUpdateDate = new Date();
-
-    // Update product stock
-    for (const item of order.cartItems) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: `Product not found: ${item.productId}`
-        });
-      }
-
-      if (product.totalStock < item.quantity) {
+    try {
+      // Verify payment with Razorpay
+      const payment = await razorpay.payments.fetch(razorpayPaymentId);
+      
+      if (payment.status !== 'captured') {
+        order.paymentStatus = "failed";
+        await order.save();
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for product: ${product.title}`
+          message: "Payment not captured",
+          paymentStatus: payment.status
         });
       }
 
-      product.totalStock -= item.quantity;
-      await product.save();
+      // Update order status
+      order.paymentStatus = "paid";
+      order.orderStatus = "confirmed";
+      order.razorpayPaymentId = razorpayPaymentId;
+      order.razorpaySignature = razorpaySignature;
+      order.orderUpdateDate = new Date();
+
+      // Update product stock and clear cart
+      await Promise.all([
+        ...order.cartItems.map(async (item) => {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            product.totalStock -= item.quantity;
+            await product.save();
+          }
+        }),
+        order.cartId ? Cart.findByIdAndDelete(order.cartId) : Promise.resolve()
+      ]);
+
+      await order.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Payment verified and order confirmed",
+        data: order
+      });
+
+    } catch (razorpayError) {
+      console.error('Razorpay payment verification failed:', razorpayError);
+      order.paymentStatus = "failed";
+      await order.save();
+      return res.status(500).json({
+        success: false,
+        message: "Failed to verify payment with Razorpay",
+        error: razorpayError.message
+      });
     }
 
-    // Clear cart if exists
-    if (order.cartId) {
-      await Cart.findByIdAndDelete(order.cartId);
-    }
-
-    await order.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Payment verified and order confirmed",
-      data: order
-    });
   } catch (error) {
     console.error('Payment capture error:', error);
     res.status(500).json({
