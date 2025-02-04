@@ -208,23 +208,23 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Create JWT token
+    // Create JWT token without expiration
     const token = jwt.sign(
       {
         id: user._id,
         role: user.role,
         email: user.email
       },
-      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
-      { expiresIn: "24h" }
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY"
+      // Removed expiresIn option to make token never expire
     );
 
-    // Set secure cookie
+    // Set cookie without expiration
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      // Removed maxAge to make cookie persist until browser closes
     });
 
     res.status(200).json({
@@ -236,7 +236,7 @@ const loginUser = async (req, res) => {
         role: user.role,
         userName: user.userName
       },
-      token // Also send token for mobile clients
+      token
     });
   } catch (error) {
     console.error(error);
@@ -247,15 +247,30 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Logout user
+// Logout user - Make sure to invalidate the token
 const logoutUser = (req, res) => {
-  res.clearCookie("token").json({
-    success: true,
-    message: "Logged out successfully!",
-  });
+  try {
+    // Clear the cookie
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict"
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully!"
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Logout failed"
+    });
+  }
 };
 
-// Middleware to check authentication
+// Update the auth middleware to handle non-expiring tokens
 const authMiddleware = async (req, res, next) => {
   try {
     // Check for Authorization header first
@@ -279,12 +294,20 @@ const authMiddleware = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "CLIENT_SECRET_KEY");
       
-      // Fetch user from database to ensure they still exist
+      // Fetch user from database to ensure they still exist and are still active
       const user = await User.findById(decoded.id).select('-password');
       if (!user) {
         return res.status(401).json({
           success: false,
           message: "User no longer exists",
+        });
+      }
+
+      // Check if user is active
+      if (user.status === 'inactive') {
+        return res.status(401).json({
+          success: false,
+          message: "User account is inactive",
         });
       }
       
@@ -293,7 +316,7 @@ const authMiddleware = async (req, res, next) => {
     } catch (error) {
       return res.status(401).json({
         success: false,
-        message: "Invalid or expired token",
+        message: "Invalid token",
       });
     }
   } catch (error) {
