@@ -294,45 +294,16 @@ const getAllOrdersByUser = async (req, res) => {
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const order = await Order.findById(id)
-      .populate({
-        path: 'cartItems.productId',
-        select: 'title image price salePrice'
-      });
+    const order = await Order.findById(id).populate('userId');
 
     if (!order) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Order not found!" 
-      });
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    // Format the response to include product details
-    const formattedOrder = {
-      ...order.toObject(),
-      cartItems: order.cartItems.map(item => ({
-        ...item,
-        product: {
-          title: item.productId?.title || item.title,
-          image: item.productId?.image || '',
-          price: item.productId?.price || item.price,
-          salePrice: item.productId?.salePrice || 0
-        }
-      }))
-    };
-
-    res.status(200).json({ 
-      success: true, 
-      data: formattedOrder 
-    });
+    res.status(200).json({ success: true, data: order });
   } catch (error) {
     console.error('Error fetching order details:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch order details",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 

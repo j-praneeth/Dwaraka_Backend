@@ -1,29 +1,21 @@
 const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  cartId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cart' },
-  cartItems: [{ 
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-    quantity: Number,
-    price: Number,
-    title: String
-  }],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  cartItems: [{ title: String, quantity: Number, price: Number }],
+  totalAmount: Number,
+  orderDate: { type: Date, default: Date.now },
+  paymentMethod: String,
+  paymentStatus: String,
+  orderStatus: { type: String, enum: ['pending', 'confirmed', 'rejected', 'returned'], default: 'pending' },
   addressInfo: {
     address: String,
     city: String,
     pincode: String,
-    phone: String
+    phone: String,
+    notes: String,
   },
-  orderStatus: { 
-    type: String, 
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned', 'refunded'],
-    default: 'pending' 
-  },
-  paymentMethod: { type: String, required: true },
-  paymentStatus: { type: String, default: 'pending' },
-  totalAmount: { type: Number, required: true },
-  orderDate: { type: Date, default: Date.now },
+  cartId: { type: mongoose.Schema.Types.ObjectId, ref: 'Cart' },
   orderUpdateDate: { type: Date },
   razorpayOrderId: String,
   razorpayPaymentId: String,
