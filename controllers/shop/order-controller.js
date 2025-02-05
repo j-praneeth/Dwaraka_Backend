@@ -181,7 +181,7 @@ const capturePayment = async (req, res) => {
       order.paymentStatus = "failed";
       await order.save();
       return res.status(400).json({
-        success: false,
+          success: false,
         message: "Payment verification failed"
       });
     }
@@ -419,15 +419,6 @@ const requestReturn = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "Unauthorized: Not your order"
-      });
-    }
-
-    // Check if return is possible (e.g., within 7 days of delivery)
-    const deliveryDate = order.trackingInfo?.updatedAt;
-    if (!deliveryDate || Date.now() - deliveryDate > 7 * 24 * 60 * 60 * 1000) {
-      return res.status(400).json({
-        success: false,
-        message: "Return window has expired (7 days from delivery)"
       });
     }
 
