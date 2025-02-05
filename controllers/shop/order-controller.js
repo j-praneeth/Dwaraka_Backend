@@ -371,6 +371,8 @@ const updateOrderTracking = async (req, res) => {
       order.orderStatus = 'shipped';
     } else if (status === 'delivered') {
       order.orderStatus = 'delivered';
+    } else if (status === 'returned') {
+      order.orderStatus = 'returned'; // Set order status to returned
     }
 
     await order.save();
@@ -477,7 +479,7 @@ const processReturnRequest = async (req, res) => {
         trackingId,
         updatedAt: new Date()
       };
-      order.orderStatus = 'returned';
+      order.orderStatus = 'returned'; // Set order status to returned
     } else if (status === 'rejected') {
       order.orderStatus = 'delivered'; // Revert to delivered status
     }
