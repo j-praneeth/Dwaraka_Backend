@@ -521,9 +521,9 @@ const updateReturnTracking = async (req, res) => {
 
 const getAllReturnRequests = async (req, res) => {
   try {
-    const orders = await Order.find({ "returnRequest.status": { $ne: "completed" } }) // Fetch orders with pending return requests
-      .populate('userId', 'userName email') // Populate user details if needed
-      .populate('cartItems.productId', 'title image price salePrice'); // Populate product details if needed
+    const orders = await Order.find({ "returnRequest.status": { $ne: "completed" } })
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
 
     if (!orders.length) {
       return res.status(404).json({ 
