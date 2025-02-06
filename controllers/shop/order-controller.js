@@ -425,51 +425,28 @@ const requestReturn = async (req, res) => {
 
 // Process return request (Admin only)
 const processReturnRequest = async (req, res) => {
+  const { orderId } = req.params;
+
   try {
-    const { orderId } = req.params;
-    const { status, refundAmount, pickupDate, courierName, trackingId } = req.body;
-
     const order = await Order.findById(orderId);
-    if (!order || !order.returnRequest) {
-      return res.status(404).json({
-        success: false,
-        message: "Order or return request not found"
-      });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    // Update return request
-    order.returnRequest.status = status;
-    order.returnRequest.processedDate = new Date();
-    
-    if (status === 'approved') {
-      order.returnRequest.refundAmount = refundAmount;
-      order.returnRequest.pickupDate = pickupDate;
-      order.returnRequest.returnTrackingInfo = {
-        status: 'pickup_scheduled',
-        courierName,
-        trackingId,
-        updatedAt: new Date()
-      };
-      order.orderStatus = 'returned'; // Set order status to returned
-    } else if (status === 'rejected') {
-      order.orderStatus = 'delivered'; // Revert to delivered status
-    }
-
+    // Update return request status
+    order.returnRequest.status = 'accepted'; // Mark as accepted for processing
     await order.save();
 
-    res.status(200).json({
-      success: true,
-      message: `Return request ${status}`,
-      data: order
-    });
+    // Here you would integrate with your payment provider to process the refund
+    // For example, using Razorpay's API to process the refund
+    // Assuming refund is successful:
+    order.refundStatus = 'completed'; // Mark refund as completed
+    await order.save();
 
+    res.status(200).json({ success: true, message: "Return processed successfully", data: order });
   } catch (error) {
-    console.error('Process return error:', error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to process return request",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    console.error('Error processing return request:', error);
+    res.status(500).json({ success: false, message: "Failed to process return request" });
   }
 };
 

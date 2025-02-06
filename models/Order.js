@@ -35,7 +35,7 @@ const OrderSchema = new mongoose.Schema({
   returnRequest: {
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled'],
+      enum: ['pending', 'accepted', 'completed', 'cancelled'],
       default: 'pending'
     },
     reason: String,
@@ -59,6 +59,11 @@ const OrderSchema = new mongoose.Schema({
       trackingId: String,
       courierName: String
     }
+  },
+  refundStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
   }
 }, { timestamps: true });
 

@@ -32,7 +32,7 @@ router.put("/tracking/:orderId", updateOrderTracking);
 
 // Return routes
 router.post("/return/:orderId", requestReturn);
-router.put("/return/:orderId/process", processReturnRequest);
+router.post("/return/:orderId/process", processReturnRequest);
 router.put("/return/:orderId/tracking", updateReturnTracking);
 
 // Add a test route for Razorpay credentials
