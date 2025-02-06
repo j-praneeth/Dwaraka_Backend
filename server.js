@@ -66,6 +66,8 @@ const startServer = async () => {
     });
     console.log('MongoDB connected successfully');
     
+    mongoose.set('strictPopulate', false);
+    
     app.listen(PORT, () => {
       console.log(`Server is running on port http://localhost:${PORT}`);
     });

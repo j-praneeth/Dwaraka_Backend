@@ -253,7 +253,7 @@ const getAllOrdersByUser = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: 'cartItems.productId',
-        select: 'title image price salePrice' // Added image and salePrice to populated fields
+        select: 'title image price salePrice'
       });
 
     if (!orders.length) {
