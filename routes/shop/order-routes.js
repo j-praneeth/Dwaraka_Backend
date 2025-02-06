@@ -10,7 +10,8 @@ const {
   updateOrderTracking,
   requestReturn,
   processReturnRequest,
-  updateReturnTracking
+  updateReturnTracking,
+  getAllReturnRequests
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
@@ -22,6 +23,9 @@ router.post("/create", createOrder);
 router.post("/capture", capturePayment);
 router.get("/user/:userId", getAllOrdersByUser);
 router.get("/details/:id", getOrderDetails);
+
+// New route for fetching all return requests
+router.get("/returns", getAllReturnRequests);
 
 // Update order tracking - Protected for admin only
 router.put("/tracking/:orderId", updateOrderTracking);

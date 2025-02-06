@@ -519,6 +519,40 @@ const updateReturnTracking = async (req, res) => {
   }
 };
 
+const getAllReturnRequests = async (req, res) => {
+  try {
+    const orders = await Order.find({ "returnRequest.status": { $ne: "completed" } }) // Fetch orders with pending return requests
+      .populate('userId', 'userName email') // Populate user details if needed
+      .populate('cartItems.productId', 'title image price salePrice'); // Populate product details if needed
+
+    if (!orders.length) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "No return requests found!" 
+      });
+    }
+
+    const returnRequests = orders.map(order => ({
+      orderId: order._id,
+      userId: order.userId,
+      returnRequest: order.returnRequest,
+      cartItems: order.cartItems
+    }));
+
+    res.status(200).json({ 
+      success: true, 
+      data: returnRequests 
+    });
+  } catch (error) {
+    console.error('Error fetching return requests:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch return requests",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
@@ -527,5 +561,6 @@ module.exports = {
   updateOrderTracking,
   requestReturn,
   processReturnRequest,
-  updateReturnTracking
+  updateReturnTracking,
+  getAllReturnRequests
 };
