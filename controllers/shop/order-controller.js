@@ -554,6 +554,9 @@ const cancelReturnRequest = async (req, res) => {
     // Remove the returnRequest field
     order.returnRequest = undefined; // or delete order.returnRequest;
 
+    // Optionally, you can keep the orderStatus as is or set it to a valid status
+    // For example, if you want to keep it as 'delivered', do not change it here
+
     await order.save();
 
     res.status(200).json({

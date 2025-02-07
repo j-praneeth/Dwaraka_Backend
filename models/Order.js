@@ -12,7 +12,7 @@ const OrderSchema = new mongoose.Schema({
   orderDate: { type: Date, default: Date.now },
   paymentMethod: String,
   paymentStatus: String,
-  orderStatus: { type: String, enum: ['pending', 'confirmed', 'rejected', 'returned'], default: 'pending' },
+  orderStatus: { type: String, enum: ['pending', 'confirmed', 'rejected', 'returned', 'delivered'], default: 'pending' },
   addressInfo: {
     address: String,
     city: String,
