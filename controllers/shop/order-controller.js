@@ -530,6 +530,47 @@ const getAllReturnRequests = async (req, res) => {
   }
 };
 
+const cancelReturnRequest = async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    // Find the order by ID
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Check if there is a return request
+    if (!order.returnRequest) {
+      return res.status(400).json({
+        success: false,
+        message: "No return request to cancel",
+      });
+    }
+
+    // Remove the returnRequest field
+    order.returnRequest = undefined; // or delete order.returnRequest;
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Return request canceled successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error('Error canceling return request:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel return request",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
@@ -539,5 +580,6 @@ module.exports = {
   requestReturn,
   processReturnRequest,
   updateReturnTracking,
-  getAllReturnRequests
+  getAllReturnRequests,
+  cancelReturnRequest
 };

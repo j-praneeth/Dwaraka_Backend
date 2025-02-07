@@ -11,7 +11,8 @@ const {
   requestReturn,
   processReturnRequest,
   updateReturnTracking,
-  getAllReturnRequests
+  getAllReturnRequests,
+  cancelReturnRequest
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
@@ -26,6 +27,9 @@ router.get("/details/:id", getOrderDetails);
 
 // New route for fetching all return requests
 router.get("/returns", getAllReturnRequests);
+
+// New route for canceling a return request
+router.delete("/return/:orderId/cancel", cancelReturnRequest);
 
 // Update order tracking - Protected for admin only
 router.put("/tracking/:orderId", updateOrderTracking);
