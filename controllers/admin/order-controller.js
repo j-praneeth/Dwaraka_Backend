@@ -25,28 +25,21 @@ const getAllOrdersOfAllUsers = async (req, res) => {
 };
 
 const getOrderDetailsForAdmin = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    const order = await Order.findById(id);
+  try {
+    const order = await Order.findById(id)
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
 
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found!",
-      });
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      data: order,
-    });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({
-      success: false,
-      message: "Some error occured!",
-    });
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({ success: false, message: "Failed to fetch order details" });
   }
 };
 
