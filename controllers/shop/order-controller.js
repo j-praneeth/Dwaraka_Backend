@@ -576,7 +576,6 @@ const updateReturnStatus = async (req, res) => {
   const { status } = req.body;
 
   try {
-    // Find the order by ID
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({
@@ -585,7 +584,6 @@ const updateReturnStatus = async (req, res) => {
       });
     }
 
-    // Check if returnRequest exists
     if (!order.returnRequest) {
       return res.status(400).json({
         success: false,
@@ -593,9 +591,7 @@ const updateReturnStatus = async (req, res) => {
       });
     }
 
-    // Update the return request status
     order.returnRequest.status = status;
-
     await order.save();
 
     res.status(200).json({
