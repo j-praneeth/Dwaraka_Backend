@@ -1,4 +1,5 @@
 const Feature = require("../../models/Feature");
+const FeatureImage = require("../../models/FeatureImage");
 
 const addFeatureImage = async (req, res) => {
   try {
@@ -42,4 +43,32 @@ const getFeatureImages = async (req, res) => {
   }
 };
 
-module.exports = { addFeatureImage, getFeatureImages };
+const deleteFeatureImage = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deletedImage = await FeatureImage.findByIdAndDelete(id);
+
+    if (!deletedImage) {
+      return res.status(404).json({
+        success: false,
+        message: "Feature image not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Feature image deleted successfully",
+      data: deletedImage,
+    });
+  } catch (error) {
+    console.error('Error deleting feature image:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete feature image",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+module.exports = { addFeatureImage, getFeatureImages, deleteFeatureImage };
