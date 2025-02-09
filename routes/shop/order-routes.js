@@ -13,7 +13,8 @@ const {
   updateReturnTracking,
   getAllReturnRequests,
   cancelReturnRequest,
-  updateReturnStatus
+  updateReturnStatus,
+  updateRefundStatus
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
@@ -42,6 +43,9 @@ router.put("/return/:orderId/tracking", updateReturnTracking);
 
 // New route for updating return status
 router.put("/return/:orderId", updateReturnStatus);
+
+// New route for updating refund status
+router.put("/refund/:orderId", updateRefundStatus);
 
 // Add a test route for Razorpay credentials
 router.get("/test-razorpay", async (req, res) => {

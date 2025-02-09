@@ -609,6 +609,38 @@ const updateReturnStatus = async (req, res) => {
   }
 };
 
+const updateRefundStatus = async (req, res) => {
+  const { orderId } = req.params;
+  const { refundStatus } = req.body;
+
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Update the refund status
+    order.refundStatus = refundStatus; // Assuming refundStatus is a field in your Order model
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Refund status updated successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error('Error updating refund status:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update refund status",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
@@ -620,5 +652,6 @@ module.exports = {
   updateReturnTracking,
   getAllReturnRequests,
   cancelReturnRequest,
-  updateReturnStatus
+  updateReturnStatus,
+  updateRefundStatus
 };
