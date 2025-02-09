@@ -36,7 +36,6 @@ const OrderSchema = new mongoose.Schema({
     status: {
       type: String,
       enum: ['pending', 'accepted', 'completed', 'cancelled'],
-      default: 'pending'
     },
     reason: String,
     description: String,
@@ -44,8 +43,6 @@ const OrderSchema = new mongoose.Schema({
     requestDate: Date,
     processedDate: Date,
     pickupDate: Date,
-    refundAmount: Number,
-    refundId: String,
     pickupAddress: {
       address: String,
       city: String,

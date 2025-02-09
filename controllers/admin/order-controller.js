@@ -30,7 +30,8 @@ const getOrderDetailsForAdmin = async (req, res) => {
   try {
     const order = await Order.findById(id)
       .populate('userId', 'userName email')
-      .populate('cartItems.productId', 'title image price salePrice');
+      .populate('cartItems.productId', 'title image price salePrice')
+      .select('-returnRequest');
 
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
