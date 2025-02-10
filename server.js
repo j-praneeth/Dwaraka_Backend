@@ -72,6 +72,11 @@ app.use("/api/shop/category", shopCategoryRouter);
 
 app.use("/api/common/feature", commonFeatureRouter);
 
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
+
 // Connect to MongoDB and start server
 const startServer = async () => {
   try {
