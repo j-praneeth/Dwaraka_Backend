@@ -185,6 +185,7 @@ const registerUser = async (req, res) => {
 // Login user
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+  console.log("Login attempt for email:", email); // Log the email
 
   try {
     if (!email || !password) {
@@ -195,6 +196,7 @@ const loginUser = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
+    console.log("User found:", user); // Log the user object
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -203,6 +205,7 @@ const loginUser = async (req, res) => {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log("Is password valid:", isPasswordValid); // Log the result
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -218,7 +221,7 @@ const loginUser = async (req, res) => {
         email: user.email
       },
       process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
-      { expiresIn: "60m" } // Set expiration if needed
+      { expiresIn: "60m" }
     );
 
     // Set cookie
