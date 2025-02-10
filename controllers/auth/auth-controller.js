@@ -188,13 +188,6 @@ const loginUser = async (req, res) => {
   console.log("Login attempt for email:", email); // Log the email
 
   try {
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide email and password"
-      });
-    }
-
     const user = await User.findOne({ email });
     console.log("User found:", user); // Log the user object
     if (!user) {
@@ -213,25 +206,14 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Create JWT token
+    // Create JWT token and respond
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-        email: user.email
-      },
+      { id: user._id, role: user.role, email: user.email },
       process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
       { expiresIn: "60m" }
     );
 
-    // Set cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict"
-    });
-
-    res.status(200).json({
+    res.cookie("token", token, { httpOnly: true }).json({
       success: true,
       message: "Login successful",
       user: {
@@ -239,8 +221,7 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         userName: user.userName
-      },
-      token
+      }
     });
   } catch (error) {
     console.error("Error logging in:", error);
