@@ -348,7 +348,9 @@ const requestPasswordReset = async (req, res) => {
 
     // Send email with reset link
     const transporter = nodemailer.createTransport({
-      service: "Gmail",
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // Use false for port 587
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
