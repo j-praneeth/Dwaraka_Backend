@@ -125,7 +125,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const User = require("../../models/User");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const sgMail = require('@sendgrid/mail');
 
 let bcrypt;
 try {
@@ -330,6 +330,8 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Set your SendGrid API key
+
 const requestPasswordReset = async (req, res) => {
   const { email } = req.body;
 
@@ -346,27 +348,15 @@ const requestPasswordReset = async (req, res) => {
 
     await user.save();
 
-    // Configure transporter
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Send OTP email
-    const mailOptions = {
+    // Send OTP email using SendGrid
+    const msg = {
       to: email,
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER, // Your verified sender email
       subject: "Password Reset OTP",
-      text: `Your OTP for password reset is: ${otp}\n\n` +
-            `This OTP is valid for 5 minutes.`,
+      text: `Your OTP for password reset is: ${otp}\n\nThis OTP is valid for 5 minutes.`,
     };
 
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
 
     res.status(200).json({ success: true, message: "OTP sent to your email" });
   } catch (error) {
