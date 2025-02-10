@@ -15,6 +15,7 @@ const createDefaultCategories = async (req, res) => {
 
   try {
     for (const categoryName of defaultCategories) {
+      console.log(`Checking for category: ${categoryName}`);
       const existingCategory = await Category.findOne({ name: categoryName });
       if (!existingCategory) {
         const newCategory = new Category({ name: categoryName });
