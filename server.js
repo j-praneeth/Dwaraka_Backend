@@ -19,6 +19,7 @@ const shopCategoryRouter = require("./routes/shop/category-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const categoryController = require("./controllers/shop/category-controller"); // Import the category controller
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -81,6 +82,9 @@ const startServer = async () => {
     console.log('MongoDB connected successfully');
     
     mongoose.set('strictPopulate', false);
+    
+    // Ensure default categories are created
+    await categoryController.createDefaultCategories();
     
     app.listen(PORT, () => {
       console.log(`Server is running on port http://localhost:${PORT}`);
