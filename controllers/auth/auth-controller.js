@@ -125,7 +125,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const User = require("../../models/User");
 const crypto = require("crypto");
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require("nodemailer");
 
 let bcrypt;
 try {
@@ -184,12 +184,17 @@ const registerUser = async (req, res) => {
 
 // Login user
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-  console.log("Login attempt for email:", email); // Log the email
-
   try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password"
+      });
+    }
+
     const user = await User.findOne({ email });
-    console.log("User found:", user); // Log the user object
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -198,7 +203,6 @@ const loginUser = async (req, res) => {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log("Is password valid:", isPasswordValid); // Log the result
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -206,14 +210,26 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Create JWT token and respond
+    // Create JWT token without expiration
     const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
-      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
-      { expiresIn: "60m" }
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email
+      },
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY"
+      // Removed expiresIn option to make token never expire
     );
 
-    res.cookie("token", token, { httpOnly: true }).json({
+    // Set cookie without expiration
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      // Removed maxAge to make cookie persist until browser closes
+    });
+
+    res.status(200).json({
       success: true,
       message: "Login successful",
       user: {
@@ -221,10 +237,11 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         userName: user.userName
-      }
+      },
+      token
     });
   } catch (error) {
-    console.error("Error logging in:", error);
+    console.error(error);
     res.status(500).json({
       success: false,
       message: "Login failed"
@@ -243,7 +260,7 @@ const logoutUser = (req, res) => {
     });
 
     res.status(200).json({
-    success: true,
+      success: true,
       message: "Logged out successfully!"
     });
   } catch (error) {
@@ -270,8 +287,8 @@ const authMiddleware = async (req, res, next) => {
     }
 
     if (!token) {
-    return res.status(401).json({
-      success: false,
+      return res.status(401).json({
+        success: false,
         message: "Authentication required! Please login.",
       });
     }
@@ -297,7 +314,7 @@ const authMiddleware = async (req, res, next) => {
       }
       
       req.user = user;
-    next();
+      next();
     } catch (error) {
       return res.status(401).json({
         success: false,
@@ -313,8 +330,6 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Set your SendGrid API key
-
 const requestPasswordReset = async (req, res) => {
   const { email } = req.body;
 
@@ -324,70 +339,68 @@ const requestPasswordReset = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Generate a 4-digit OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    user.resetPasswordToken = otp; // Store OTP temporarily
-    user.resetPasswordExpires = Date.now() + 300000; // 5 minutes
+    // Generate a reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
 
     await user.save();
 
-    // Send OTP email using SendGrid
-    const msg = {
+    // Send email with reset link
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
       to: email,
-      from: process.env.EMAIL_USER, // Your verified sender email
-      subject: "Password Reset OTP",
-      text: `Your OTP for password reset is: ${otp}\n\nThis OTP is valid for 5 minutes.`,
+      from: process.env.EMAIL_USER,
+      subject: "Password Reset Request",
+      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+            `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+            `http://${req.headers.host}/reset/${resetToken}\n\n` +
+            `If you did not request this, please ignore this email and your password will remain unchanged.\n`,
     };
 
-    await sgMail.send(msg);
+    await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ success: true, message: "OTP sent to your email" });
+    res.status(200).json({ success: true, message: "Reset link sent to your email" });
   } catch (error) {
-    console.error("Error requesting password reset:", error);
-    res.status(500).json({ success: false, message: "Failed to send OTP" });
-  }
-};
-
-const verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user || user.resetPasswordToken !== otp || Date.now() > user.resetPasswordExpires) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
-    }
-
-    // OTP is valid, allow user to reset password
-    res.status(200).json({ success: true, message: "OTP verified, please enter your new password" });
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    res.status(500).json({ success: false, message: "Failed to verify OTP" });
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({ success: false, message: "Failed to send reset email" });
   }
 };
 
 const resetPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
+  const { token, newPassword } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(400).json({ success: false, message: "Password reset token is invalid or has expired." });
     }
 
-    // Hash the new password
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = undefined; // Clear the OTP
-    user.resetPasswordExpires = undefined; // Clear expiration
+    // Update the user's password
+    user.password = newPassword; // Ensure you hash the password before saving
+    user.resetPasswordToken = undefined; // Clear the reset token
+    user.resetPasswordExpires = undefined; // Clear the expiration
 
     await user.save();
 
-    res.status(200).json({ success: true, message: "Password has been reset successfully" });
+    res.status(200).json({ success: true, message: "Password has been reset successfully." });
   } catch (error) {
-    console.error("Error resetting password:", error);
+    console.error('Error resetting password:', error);
     res.status(500).json({ success: false, message: "Failed to reset password" });
   }
 };
 
 app.post('/login', loginUser);
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware, requestPasswordReset, verifyOtp, resetPassword };
+module.exports = { registerUser, loginUser, logoutUser, authMiddleware, requestPasswordReset, resetPassword };
