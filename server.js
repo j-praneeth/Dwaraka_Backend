@@ -84,8 +84,8 @@ const startServer = async () => {
     mongoose.set('strictPopulate', false);
     mongoose.set('strictQuery', false);
     
-    // Ensure default categories are created
-    await categoryController.createDefaultCategories();
+    // Commenting out the default categories creation for now
+    // await categoryController.createDefaultCategories();
     
     app.listen(PORT, () => {
       console.log(`Server is running on port http://localhost:${PORT}`);
