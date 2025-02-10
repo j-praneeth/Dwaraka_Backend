@@ -27,7 +27,7 @@ const createDefaultCategories = async (req, res) => {
     res.status(200).json({ success: true, message: "Default categories ensured" });
   } catch (error) {
     console.error('Error creating categories:', error);
-    res.status(500).json({ success: false, message: "Failed to create categories" });
+    res.status(500).json({ success: false, message: "Failed to create categories", error: error.message });
   }
 };
 
