@@ -4,6 +4,8 @@ const {
   loginUser,
   logoutUser,
   authMiddleware,
+  requestPasswordReset,
+  resetPassword
 } = require("../../controllers/auth/auth-controller");
 
 const router = express.Router();
@@ -11,6 +13,8 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
+router.post("/request-password-reset", requestPasswordReset);
+router.post("/reset-password", resetPassword);
 router.get("/check-auth", authMiddleware, (req, res) => {
   const user = req.user;
   res.status(200).json({

@@ -79,4 +79,16 @@ const getProductDetails = async (req, res) => {
   }
 };
 
-module.exports = { getFilteredProducts, getProductDetails };
+const getProductsByCategory = async (req, res) => {
+  const { category } = req.params;
+
+  try {
+    const products = await Product.find({ category }); // Assuming your Product model has a category field
+    res.status(200).json({ success: true, data: products });
+  } catch (error) {
+    console.error('Error fetching products by category:', error);
+    res.status(500).json({ success: false, message: "Failed to fetch products" });
+  }
+};
+
+module.exports = { getFilteredProducts, getProductDetails, getProductsByCategory };
