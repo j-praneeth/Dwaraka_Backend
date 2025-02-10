@@ -184,9 +184,9 @@ const registerUser = async (req, res) => {
 
 // Login user
 const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
+  try {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -202,23 +202,30 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Create JWT token without expiration
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Create JWT token
     const token = jwt.sign(
       {
         id: user._id,
         role: user.role,
         email: user.email
       },
-      process.env.JWT_SECRET || "CLIENT_SECRET_KEY"
-      // Removed expiresIn option to make token never expire
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" } // Set expiration if needed
     );
 
-    // Set cookie without expiration
+    // Set cookie
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      // Removed maxAge to make cookie persist until browser closes
+      sameSite: "strict"
     });
 
     res.status(200).json({
@@ -233,7 +240,7 @@ const loginUser = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error logging in:", error);
     res.status(500).json({
       success: false,
       message: "Login failed"
@@ -252,7 +259,7 @@ const logoutUser = (req, res) => {
     });
 
     res.status(200).json({
-      success: true,
+    success: true,
       message: "Logged out successfully!"
     });
   } catch (error) {
@@ -279,8 +286,8 @@ const authMiddleware = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
+    return res.status(401).json({
+      success: false,
         message: "Authentication required! Please login.",
       });
     }
@@ -306,7 +313,7 @@ const authMiddleware = async (req, res, next) => {
       }
       
       req.user = user;
-      next();
+    next();
     } catch (error) {
       return res.status(401).json({
         success: false,
