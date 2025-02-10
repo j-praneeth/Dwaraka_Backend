@@ -350,7 +350,7 @@ const requestPasswordReset = async (req, res) => {
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
-      secure: false, // Use false for port 587, true for 465
+      secure: false, // Use false for port 587
       auth: {
         user: process.env.EMAIL_USER, // Must be set in .env
         pass: process.env.EMAIL_PASS, // App password, not Gmail password!
