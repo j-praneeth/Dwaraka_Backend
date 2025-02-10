@@ -346,33 +346,36 @@ const requestPasswordReset = async (req, res) => {
 
     await user.save();
 
-    // Send email with reset link
+    // Configure transporter
     const transporter = nodemailer.createTransport({
-      service: "Gmail",
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // Use false for port 587, true for 465
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.EMAIL_USER, // Must be set in .env
+        pass: process.env.EMAIL_PASS, // App password, not Gmail password!
       },
     });
 
+    // Send email
     const mailOptions = {
       to: email,
       from: process.env.EMAIL_USER,
       subject: "Password Reset Request",
-      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
-            `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+      text: `You requested a password reset. Click the link below to reset your password:\n\n` +
             `http://${req.headers.host}/reset/${resetToken}\n\n` +
-            `If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+            `If you did not request this, please ignore this email.`,
     };
 
     await transporter.sendMail(mailOptions);
 
     res.status(200).json({ success: true, message: "Reset link sent to your email" });
   } catch (error) {
-    console.error('Error requesting password reset:', error);
+    console.error("Error requesting password reset:", error);
     res.status(500).json({ success: false, message: "Failed to send reset email" });
   }
 };
+
 
 const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
