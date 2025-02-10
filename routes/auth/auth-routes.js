@@ -5,6 +5,7 @@ const {
   logoutUser,
   authMiddleware,
   requestPasswordReset,
+  verifyOtp,
   resetPassword
 } = require("../../controllers/auth/auth-controller");
 
@@ -14,6 +15,7 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.post("/request-password-reset", requestPasswordReset);
+router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
 router.get("/check-auth", authMiddleware, (req, res) => {
   const user = req.user;

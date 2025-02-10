@@ -339,10 +339,10 @@ const requestPasswordReset = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    // Generate a reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    // Generate a 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    user.resetPasswordToken = otp; // Store OTP temporarily
+    user.resetPasswordExpires = Date.now() + 300000; // 5 minutes
 
     await user.save();
 
@@ -350,60 +350,71 @@ const requestPasswordReset = async (req, res) => {
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 587,
-      secure: false, // Use false for port 587
+      secure: false,
       auth: {
-        user: process.env.EMAIL_USER, // Must be set in .env
-        pass: process.env.EMAIL_PASS, // App password, not Gmail password!
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
-    // Send email
+    // Send OTP email
     const mailOptions = {
       to: email,
       from: process.env.EMAIL_USER,
-      subject: "Password Reset Request",
-      text: `You requested a password reset. Click the link below to reset your password:\n\n` +
-            `http://${req.headers.host}/reset/${resetToken}\n\n` +
-            `If you did not request this, please ignore this email.`,
+      subject: "Password Reset OTP",
+      text: `Your OTP for password reset is: ${otp}\n\n` +
+            `This OTP is valid for 5 minutes.`,
     };
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ success: true, message: "Reset link sent to your email" });
+    res.status(200).json({ success: true, message: "OTP sent to your email" });
   } catch (error) {
     console.error("Error requesting password reset:", error);
-    res.status(500).json({ success: false, message: "Failed to send reset email" });
+    res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
-
-const resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
+const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
 
   try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ success: false, message: "Password reset token is invalid or has expired." });
+    const user = await User.findOne({ email });
+    if (!user || user.resetPasswordToken !== otp || Date.now() > user.resetPasswordExpires) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
     }
 
-    // Update the user's password
-    user.password = newPassword; // Ensure you hash the password before saving
-    user.resetPasswordToken = undefined; // Clear the reset token
-    user.resetPasswordExpires = undefined; // Clear the expiration
+    // OTP is valid, allow user to reset password
+    res.status(200).json({ success: true, message: "OTP verified, please enter your new password" });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(500).json({ success: false, message: "Failed to verify OTP" });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Hash the new password
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined; // Clear the OTP
+    user.resetPasswordExpires = undefined; // Clear expiration
 
     await user.save();
 
-    res.status(200).json({ success: true, message: "Password has been reset successfully." });
+    res.status(200).json({ success: true, message: "Password has been reset successfully" });
   } catch (error) {
-    console.error('Error resetting password:', error);
+    console.error("Error resetting password:", error);
     res.status(500).json({ success: false, message: "Failed to reset password" });
   }
 };
 
 app.post('/login', loginUser);
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware, requestPasswordReset, resetPassword };
+module.exports = { registerUser, loginUser, logoutUser, authMiddleware, requestPasswordReset, verifyOtp, resetPassword };
