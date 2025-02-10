@@ -19,6 +19,9 @@ const createDefaultCategories = async (req, res) => {
       if (!existingCategory) {
         const newCategory = new Category({ name: categoryName });
         await newCategory.save();
+        console.log(`Created category: ${categoryName}`);
+      } else {
+        console.log(`Category already exists: ${categoryName}`);
       }
     }
     res.status(200).json({ success: true, message: "Default categories ensured" });

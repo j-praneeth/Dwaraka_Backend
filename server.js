@@ -81,7 +81,8 @@ const startServer = async () => {
     });
     console.log('MongoDB connected successfully');
     
-    mongoose.set('strictPopulate', false);
+    mongoose.set('strictPopulate', false');
+    mongoose.set('strictQuery', false);
     
     // Ensure default categories are created
     await categoryController.createDefaultCategories();
