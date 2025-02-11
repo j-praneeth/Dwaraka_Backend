@@ -281,8 +281,8 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // **Hash password before saving**
-    const hashPassword = await bcrypt.hash(password, 12);
+    // **Hash password using 10 rounds**
+    const hashPassword = await bcrypt.hash(password, 10); // Fixed rounds to 10
     const newUser = new User({
       userName,
       email,
@@ -327,6 +327,7 @@ const loginUser = async (req, res) => {
 
     // Compare entered password with hashed password
     const checkPasswordMatch = await bcrypt.compare(trimmedPassword, checkUser.password);
+    console.log("Password Match Result:", checkPasswordMatch); // Debugging
 
     if (!checkPasswordMatch) {
       console.log("Password does not match!");
@@ -398,6 +399,7 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+// **API Routes**
 app.post('/login', loginUser);
 app.post('/register', registerUser);
 app.post('/logout', logoutUser);
