@@ -341,7 +341,9 @@ const resetPassword = async (req, res) => {
 
     // Hash the new password
     user.password = await bcrypt.hash(newPassword, 12);
-    await user.save();
+    
+    // Update the user in the database
+    await user.save(); // This line updates the user's password in the database
 
     // Log the user in with the new password
     const token = jwt.sign(
