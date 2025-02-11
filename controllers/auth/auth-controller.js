@@ -184,16 +184,17 @@ const registerUser = async (req, res) => {
 
 // Login user
 const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  // Validate input
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide email and password"
+    });
+  }
+
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide email and password"
-      });
-    }
-
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -202,34 +203,24 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Compare the provided password with the hashed password in the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log("Invalid password attempt for user:", email); // Log invalid attempt
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
       });
     }
 
-    // Create JWT token without expiration
+    // Create JWT token
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-        email: user.email
-      },
-      process.env.JWT_SECRET || "CLIENT_SECRET_KEY"
-      // Removed expiresIn option to make token never expire
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" }
     );
 
-    // Set cookie without expiration
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      // Removed maxAge to make cookie persist until browser closes
-    });
-
-    res.status(200).json({
+    res.cookie("token", token, { httpOnly: true }).json({
       success: true,
       message: "Login successful",
       user: {
@@ -237,11 +228,10 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
         userName: user.userName
-      },
-      token
+      }
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error logging in:", error);
     res.status(500).json({
       success: false,
       message: "Login failed"
