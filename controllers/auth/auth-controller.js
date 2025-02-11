@@ -318,12 +318,15 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Trim the password to remove any leading/trailing whitespace
+    const trimmedPassword = password.trim();
+
     // Debugging logs
-    console.log("Entered Password:", password);
+    console.log("Entered Password:", trimmedPassword);
     console.log("Stored Hashed Password:", checkUser.password);
 
     // Compare entered password with hashed password
-    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
+    const checkPasswordMatch = await bcrypt.compare(trimmedPassword, checkUser.password);
 
     if (!checkPasswordMatch) {
       console.log("Password does not match!");
