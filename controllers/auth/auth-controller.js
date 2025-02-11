@@ -122,24 +122,9 @@
 
 const express = require('express');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require("../../models/User");
-const crypto = require("crypto");
-const nodemailer = require("nodemailer");
-
-let bcrypt;
-try {
-  bcrypt = require('bcryptjs');
-} catch (err) {
-  console.error('Failed to load bcryptjs:', err);
-  // Fallback to a simple hash function if bcrypt fails
-  bcrypt = {
-    hash: async (password) => Buffer.from(password).toString('base64'),
-    compare: async (password, hash) => 
-      Buffer.from(password).toString('base64') === hash,
-    genSalt: async () => 10
-  };
-}
 
 const app = express();
 app.use(express.json());
@@ -186,211 +171,80 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  // Validate input
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "Please provide email and password"
-    });
-  }
-
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
+    const checkUser = await User.findOne({ email });
+    if (!checkUser)
+      return res.status(400).json({
+        success: false,
+        message: "User doesn't exist! Please register first",
+      });
+
+    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
+    if (!checkPasswordMatch)
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Incorrect password! Please try again",
       });
-    }
 
-    // Compare the provided password with the hashed password in the database
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      console.log("Invalid password attempt for user:", email); // Log invalid attempt
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials"
-      });
-    }
-
-    // Create JWT token
     const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
-      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      {
+        id: checkUser._id,
+        role: checkUser.role,
+        email: checkUser.email,
+        userName: checkUser.userName,
+      },
+      "CLIENT_SECRET_KEY",
       { expiresIn: "60m" }
     );
 
-    res.cookie("token", token, { httpOnly: true }).json({
+    res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
       success: true,
-      message: "Login successful",
+      message: "Logged in successfully",
       user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        userName: user.userName
-      }
-    });
-  } catch (error) {
-    console.error("Error logging in:", error);
-    res.status(500).json({
-      success: false,
-      message: "Login failed"
-    });
-  }
-};
-
-// Logout user - Make sure to invalidate the token
-const logoutUser = (req, res) => {
-  try {
-    // Clear the cookie
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict"
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Logged out successfully!"
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      success: false,
-      message: "Logout failed"
-    });
-  }
-};
-
-// Update the auth middleware to handle non-expiring tokens
-const authMiddleware = async (req, res, next) => {
-  try {
-    // Check for Authorization header first
-    const authHeader = req.headers.authorization;
-    let token;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    } else {
-      // Fallback to cookie
-      token = req.cookies.token;
-    }
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required! Please login.",
-      });
-    }
-
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "CLIENT_SECRET_KEY");
-      
-      // Fetch user from database to ensure they still exist and are still active
-      const user = await User.findById(decoded.id).select('-password');
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User no longer exists",
-        });
-      }
-
-      // Check if user is active
-      if (user.status === 'inactive') {
-        return res.status(401).json({
-          success: false,
-          message: "User account is inactive",
-        });
-      }
-      
-      req.user = user;
-      next();
-    } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token",
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Server error in authentication",
-    });
-  }
-};
-
-const requestPasswordReset = async (req, res) => {
-  const { email } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Generate a reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-
-    await user.save();
-
-    // Send email with reset link
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        email: checkUser.email,
+        role: checkUser.role,
+        id: checkUser._id,
+        userName: checkUser.userName,
       },
     });
-
-    const mailOptions = {
-      to: email,
-      from: process.env.EMAIL_USER,
-      subject: "Password Reset Request",
-      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
-            `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
-            `http://${req.headers.host}/reset/${resetToken}\n\n` +
-            `If you did not request this, please ignore this email and your password will remain unchanged.\n`,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.status(200).json({ success: true, message: "Reset link sent to your email" });
-  } catch (error) {
-    console.error('Error requesting password reset:', error);
-    res.status(500).json({ success: false, message: "Failed to send reset email" });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
+      message: "Some error occurred",
+    });
   }
 };
 
-const resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
+// Logout user
+const logoutUser = (req, res) => {
+  res.clearCookie("token").json({
+    success: true,
+    message: "Logged out successfully!",
+  });
+};
 
-  try {
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
+// Middleware to check authentication
+const authMiddleware = async (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token)
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized user!",
     });
 
-    if (!user) {
-      return res.status(400).json({ success: false, message: "Password reset token is invalid or has expired." });
-    }
-
-    // Update the user's password
-    user.password = newPassword; // Ensure you hash the password before saving
-    user.resetPasswordToken = undefined; // Clear the reset token
-    user.resetPasswordExpires = undefined; // Clear the expiration
-
-    await user.save();
-
-    res.status(200).json({ success: true, message: "Password has been reset successfully." });
+  try {
+    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+    req.user = decoded;
+    next();
   } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ success: false, message: "Failed to reset password" });
+    res.status(401).json({
+      success: false,
+      message: "Unauthorized user!",
+    });
   }
 };
 
 app.post('/login', loginUser);
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware, requestPasswordReset, resetPassword };
+module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
