@@ -318,11 +318,11 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // **Debugging Logs**
+    // Debugging logs
     console.log("Entered Password:", password);
     console.log("Stored Hashed Password:", checkUser.password);
 
-    // **Compare entered password with hashed password**
+    // Compare entered password with hashed password
     const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
 
     if (!checkPasswordMatch) {
@@ -333,9 +333,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    console.log("Password Matched Successfully!");
-
-    // **Generate JWT token**
+    // If password matches, generate JWT token
     const token = jwt.sign(
       {
         id: checkUser._id,
