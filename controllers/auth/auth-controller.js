@@ -252,7 +252,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const argon2 = require('argon2'); // ✅ Use Argon2 instead of bcrypt
+const argon2 = require('argon2-browser');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const User = require("../../models/User");
