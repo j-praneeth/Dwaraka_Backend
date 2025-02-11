@@ -252,7 +252,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
+const argon2 = require('argon2'); // ✅ Use Argon2 instead of bcrypt
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const User = require("../../models/User");
@@ -261,7 +261,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -281,8 +281,9 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // **Hash password using 10 rounds**
-    const hashPassword = await bcrypt.hash(password, 10); // Fixed rounds to 10
+    // ✅ Hash password with Argon2
+    const hashPassword = await argon2.hash(password);
+
     const newUser = new User({
       userName,
       email,
@@ -318,16 +319,12 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Trim the password to remove any leading/trailing whitespace
-    const trimmedPassword = password.trim();
-
     // Debugging logs
-    console.log("Entered Password:", trimmedPassword);
+    console.log("Entered Password:", password);
     console.log("Stored Hashed Password:", checkUser.password);
 
-    // Compare entered password with hashed password
-    const checkPasswordMatch = await bcrypt.compare(trimmedPassword, checkUser.password);
-    console.log("Password Match Result:", checkPasswordMatch); // Debugging
+    // ✅ Compare entered password with Argon2 hash
+    const checkPasswordMatch = await argon2.verify(checkUser.password, password);
 
     if (!checkPasswordMatch) {
       console.log("Password does not match!");
@@ -337,7 +334,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // If password matches, generate JWT token
+    // ✅ If password matches, generate JWT token
     const token = jwt.sign(
       {
         id: checkUser._id,
@@ -399,7 +396,6 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-// **API Routes**
 app.post('/login', loginUser);
 app.post('/register', registerUser);
 app.post('/logout', logoutUser);
