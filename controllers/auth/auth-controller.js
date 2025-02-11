@@ -280,101 +280,107 @@ async function verifyPassword(password, hashedPassword) {
 
 // **Register User**
 const registerUser = async (req, res) => {
-    const { userName, email, password } = req.body;
+  const { userName, email, password } = req.body;
 
-    try {
-        const checkUser = await User.findOne({ email });
-        if (checkUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User already exists! Please try again",
-            });
-        }
+  try {
+      const checkUser = await User.findOne({ email });
+      if (checkUser) {
+          return res.status(400).json({
+              success: false,
+              message: "User already exists! Please try again",
+          });
+      }
 
-        // ✅ Hash password using bcrypt
-        const hashedPassword = await hashPassword(password);
+      console.log("⚡ Hashing Password...");
+      const hashedPassword = await bcrypt.hash(password, 10);
+      console.log("✅ Hashed Password:", hashedPassword);
 
-        const newUser = new User({
-            userName,
-            email,
-            password: hashedPassword, // Store hashed password
-        });
+      const newUser = new User({
+          userName,
+          email,
+          password: hashedPassword, // Store hashed password
+      });
 
-        await newUser.save();
-        res.status(200).json({
-            success: true,
-            message: "Registration successful",
-        });
+      await newUser.save();
+      res.status(200).json({
+          success: true,
+          message: "Registration successful",
+      });
 
-    } catch (error) {
-        console.error("Registration Error:", error);
-        res.status(500).json({
-            success: false,
-            message: "An error occurred",
-        });
-    }
+  } catch (error) {
+      console.error("Registration Error:", error);
+      res.status(500).json({
+          success: false,
+          message: "An error occurred",
+      });
+  }
 };
+
 
 // **Login User**
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    try {
-        const checkUser = await User.findOne({ email });
+  try {
+      const checkUser = await User.findOne({ email });
 
-        if (!checkUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User doesn't exist! Please register first",
-            });
-        }
+      if (!checkUser) {
+          return res.status(400).json({
+              success: false,
+              message: "User doesn't exist! Please register first",
+          });
+      }
 
-        // Debugging logs
-        console.log("Entered Password:", password);
-        console.log("Stored Hashed Password:", checkUser.password);
+      console.log("Entered Password:", password);
+      console.log("Stored Hashed Password:", checkUser.password);
 
-        // ✅ Compare entered password with stored bcrypt hash
-        const checkPasswordMatch = await verifyPassword(password, checkUser.password);
+      // ✅ Compare entered password with stored bcrypt hash
+      const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
 
-        if (!checkPasswordMatch) {
-            console.log("❌ Password does not match!");
-            return res.status(401).json({
-                success: false,
-                message: "Incorrect password! Please try again",
-            });
-        }
+      console.log("Password Match:", checkPasswordMatch);
 
-        // ✅ If password matches, generate JWT token
-        const token = jwt.sign(
-            {
-                id: checkUser._id,
-                role: checkUser.role,
-                email: checkUser.email,
-                userName: checkUser.userName,
-            },
-            SECRET_KEY,
-            { expiresIn: "60m" }
-        );
+      if (!checkPasswordMatch) {
+          console.log("❌ Password does not match!");
+          return res.status(401).json({
+              success: false,
+              message: "Incorrect password! Please try again",
+          });
+      }
 
-        res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
-            success: true,
-            message: "Logged in successfully",
-            user: {
-                email: checkUser.email,
-                role: checkUser.role,
-                id: checkUser._id,
-                userName: checkUser.userName,
-            },
-        });
+      console.log("✅ Password matches! Logging in...");
 
-    } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).json({
-            success: false,
-            message: "An error occurred",
-        });
-    }
+      // Generate JWT token
+      const token = jwt.sign(
+          {
+              id: checkUser._id,
+              role: checkUser.role,
+              email: checkUser.email,
+              userName: checkUser.userName,
+          },
+          SECRET_KEY,
+          { expiresIn: "60m" }
+      );
+
+      res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
+          success: true,
+          message: "Logged in successfully",
+          user: {
+              email: checkUser.email,
+              role: checkUser.role,
+              id: checkUser._id,
+              userName: checkUser.userName,
+          },
+      });
+
+  } catch (error) {
+      console.error("Login Error:", error);
+      res.status(500).json({
+          success: false,
+          message: "An error occurred",
+      });
+  }
 };
+
 
 // **Logout User**
 const logoutUser = (req, res) => {
