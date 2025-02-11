@@ -252,7 +252,7 @@
 //
 const express = require('express');
 const cors = require('cors');
-const argon2 = require('argon2');
+const { hash, verify } = require("argon2-wasm");
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const User = require("../../models/User");
@@ -266,7 +266,18 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-const SECRET_KEY = "CLIENT_SECRET_KEY"; // Move this to environment variables!
+const SECRET_KEY = process.env.CLIENT_SECRET_KEY || "CLIENT_SECRET_KEY";
+
+// **Hash Password**
+async function hashPassword(password) {
+    const hashedPassword = await hash({ pass: password, salt: "randomSalt123" });
+    return hashedPassword.hashHex;
+}
+
+// **Verify Password**
+async function verifyPassword(password, hashedPassword) {
+    return await verify({ pass: password, hashHex: hashedPassword });
+}
 
 // **Register User**
 const registerUser = async (req, res) => {
@@ -281,13 +292,13 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // ✅ Hash password with Argon2
-    const hashPassword = await argon2.hash(password);
+    // ✅ Hash password with Argon2-wasm
+    const hashedPassword = await hashPassword(password);
 
     const newUser = new User({
       userName,
       email,
-      password: hashPassword,
+      password: hashedPassword,
     });
 
     await newUser.save();
@@ -319,12 +330,8 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Debugging logs
-    console.log("Entered Password:", password);
-    console.log("Stored Hashed Password:", checkUser.password);
-
-    // ✅ Compare entered password with Argon2 hash
-    const checkPasswordMatch = await argon2.verify(checkUser.password, password);
+    // ✅ Compare entered password with Argon2-wasm hash
+    const checkPasswordMatch = await verifyPassword(password, checkUser.password);
 
     if (!checkPasswordMatch) {
       console.log("Password does not match!");
