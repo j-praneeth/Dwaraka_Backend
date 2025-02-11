@@ -249,12 +249,12 @@
 
 // module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
 
-//
 const express = require('express');
 const cors = require('cors');
-const { hash, verify } = require("argon2-wasm");
+const { hash } = require("argon2-wasm"); // Import `hash` from argon2-wasm
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const crypto = require("crypto");
 const User = require("../../models/User");
 
 const app = express();
@@ -266,143 +266,153 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-const SECRET_KEY = process.env.CLIENT_SECRET_KEY || "CLIENT_SECRET_KEY";
+const SECRET_KEY = process.env.CLIENT_SECRET_KEY || "CLIENT_SECRET_KEY"; // Use environment variable
 
-// **Hash Password**
+// ✅ Hash Password Function
 async function hashPassword(password) {
-    const hashedPassword = await hash({ pass: password, salt: "randomSalt123" });
-    return hashedPassword.hashHex;
+    const salt = crypto.randomBytes(16).toString("hex"); // Generate random salt
+    const hashedPassword = await hash({ pass: password, salt });
+
+    return `${salt}:${hashedPassword.hashHex}`; // Store salt and hash together
 }
 
-// **Verify Password**
-async function verifyPassword(password, hashedPassword) {
-    return await verify({ pass: password, hashHex: hashedPassword });
+// ✅ Verify Password Function
+async function verifyPassword(password, storedHash) {
+    const [salt, hashHex] = storedHash.split(":"); // Extract salt and hash
+    const newHash = await hash({ pass: password, salt }); // Hash the entered password with the same salt
+
+    return newHash.hashHex === hashHex; // Compare the hashes
 }
 
 // **Register User**
 const registerUser = async (req, res) => {
-  const { userName, email, password } = req.body;
+    const { userName, email, password } = req.body;
 
-  try {
-    const checkUser = await User.findOne({ email });
-    if (checkUser) {
-      return res.status(400).json({
-        success: false,
-        message: "User already exists! Please try again",
-      });
+    try {
+        const checkUser = await User.findOne({ email });
+        if (checkUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User already exists! Please try again",
+            });
+        }
+
+        // ✅ Hash password before storing
+        const hashedPassword = await hashPassword(password);
+
+        const newUser = new User({
+            userName,
+            email,
+            password: hashedPassword, // Store hashed password
+        });
+
+        await newUser.save();
+        res.status(200).json({
+            success: true,
+            message: "Registration successful",
+        });
+
+    } catch (error) {
+        console.error("Registration Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred",
+        });
     }
-
-    // ✅ Hash password with Argon2-wasm
-    const hashedPassword = await hashPassword(password);
-
-    const newUser = new User({
-      userName,
-      email,
-      password: hashedPassword,
-    });
-
-    await newUser.save();
-    res.status(200).json({
-      success: true,
-      message: "Registration successful",
-    });
-
-  } catch (error) {
-    console.error("Registration Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "An error occurred",
-    });
-  }
 };
 
 // **Login User**
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  try {
-    const checkUser = await User.findOne({ email });
+    try {
+        const checkUser = await User.findOne({ email });
 
-    if (!checkUser) {
-      return res.status(400).json({
-        success: false,
-        message: "User doesn't exist! Please register first",
-      });
+        if (!checkUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User doesn't exist! Please register first",
+            });
+        }
+
+        // Debugging logs
+        console.log("Entered Password:", password);
+        console.log("Stored Hashed Password:", checkUser.password);
+
+        // ✅ Compare entered password with stored hash
+        const checkPasswordMatch = await verifyPassword(password, checkUser.password);
+
+        if (!checkPasswordMatch) {
+            console.log("Password does not match!");
+            return res.status(401).json({
+                success: false,
+                message: "Incorrect password! Please try again",
+            });
+        }
+
+        // ✅ If password matches, generate JWT token
+        const token = jwt.sign(
+            {
+                id: checkUser._id,
+                role: checkUser.role,
+                email: checkUser.email,
+                userName: checkUser.userName,
+            },
+            SECRET_KEY,
+            { expiresIn: "60m" }
+        );
+
+        res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
+            success: true,
+            message: "Logged in successfully",
+            user: {
+                email: checkUser.email,
+                role: checkUser.role,
+                id: checkUser._id,
+                userName: checkUser.userName,
+            },
+        });
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred",
+        });
     }
-
-    // ✅ Compare entered password with Argon2-wasm hash
-    const checkPasswordMatch = await verifyPassword(password, checkUser.password);
-
-    if (!checkPasswordMatch) {
-      console.log("Password does not match!");
-      return res.status(401).json({
-        success: false,
-        message: "Incorrect password! Please try again",
-      });
-    }
-
-    // ✅ If password matches, generate JWT token
-    const token = jwt.sign(
-      {
-        id: checkUser._id,
-        role: checkUser.role,
-        email: checkUser.email,
-        userName: checkUser.userName,
-      },
-      SECRET_KEY,
-      { expiresIn: "60m" }
-    );
-
-    res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
-      success: true,
-      message: "Logged in successfully",
-      user: {
-        email: checkUser.email,
-        role: checkUser.role,
-        id: checkUser._id,
-        userName: checkUser.userName,
-      },
-    });
-
-  } catch (error) {
-    console.error("Login Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "An error occurred",
-    });
-  }
 };
 
 // **Logout User**
 const logoutUser = (req, res) => {
-  res.clearCookie("token").json({
-    success: true,
-    message: "Logged out successfully!",
-  });
+    res.clearCookie("token").json({
+        success: true,
+        message: "Logged out successfully!",
+    });
 };
 
 // **Authentication Middleware**
 const authMiddleware = async (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized user!",
-    });
-  }
+    const token = req.cookies.token;
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized user!",
+        });
+    }
 
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: "Unauthorized user!",
-    });
-  }
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        res.status(401).json({
+            success: false,
+            message: "Unauthorized user!",
+        });
+    }
 };
 
+// **API Routes**
 app.post('/login', loginUser);
 app.post('/register', registerUser);
 app.post('/logout', logoutUser);
