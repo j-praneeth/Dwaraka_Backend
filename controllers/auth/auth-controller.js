@@ -251,10 +251,9 @@
 
 const express = require('express');
 const cors = require('cors');
-const { hash } = require("argon2-wasm"); // Import `hash` from argon2-wasm
+const bcrypt = require("bcryptjs"); // ✅ Use bcryptjs for password hashing
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const crypto = require("crypto");
 const User = require("../../models/User");
 
 const app = express();
@@ -268,20 +267,15 @@ app.use(cors({
 
 const SECRET_KEY = process.env.CLIENT_SECRET_KEY || "CLIENT_SECRET_KEY"; // Use environment variable
 
-// ✅ Hash Password Function
+// ✅ Hash Password Function (Using bcrypt)
 async function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString("hex"); // Generate random salt
-    const hashedPassword = await hash({ pass: password, salt });
-
-    return `${salt}:${hashedPassword.hashHex}`; // Store salt and hash together
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
 }
 
-// ✅ Verify Password Function
-async function verifyPassword(password, storedHash) {
-    const [salt, hashHex] = storedHash.split(":"); // Extract salt and hash
-    const newHash = await hash({ pass: password, salt }); // Hash the entered password with the same salt
-
-    return newHash.hashHex === hashHex; // Compare the hashes
+// ✅ Verify Password Function (Using bcrypt)
+async function verifyPassword(password, hashedPassword) {
+    return await bcrypt.compare(password, hashedPassword);
 }
 
 // **Register User**
@@ -297,7 +291,7 @@ const registerUser = async (req, res) => {
             });
         }
 
-        // ✅ Hash password before storing
+        // ✅ Hash password using bcrypt
         const hashedPassword = await hashPassword(password);
 
         const newUser = new User({
@@ -339,11 +333,11 @@ const loginUser = async (req, res) => {
         console.log("Entered Password:", password);
         console.log("Stored Hashed Password:", checkUser.password);
 
-        // ✅ Compare entered password with stored hash
+        // ✅ Compare entered password with stored bcrypt hash
         const checkPasswordMatch = await verifyPassword(password, checkUser.password);
 
         if (!checkPasswordMatch) {
-            console.log("Password does not match!");
+            console.log("❌ Password does not match!");
             return res.status(401).json({
                 success: false,
                 message: "Incorrect password! Please try again",
