@@ -333,29 +333,58 @@ const resetPassword = async (req, res) => {
   const { email, newPassword, confirmPassword } = req.body;
 
   try {
-    // Check if email exists in the database
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    // Validate input
+    if (!email || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required!",
+      });
     }
 
     // Check if new password and confirm password match
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ success: false, message: "Passwords do not match" });
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match!",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found!",
+      });
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-    // Update the user's password
-    user.password = hashedPassword;
-
+    user.password = await bcrypt.hash(newPassword, 12);
     await user.save();
 
-    res.status(200).json({ success: true, message: "Password has been reset successfully." });
+    // Log the user in with the new password
+    const token = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" }
+    );
+
+    res.cookie("token", token, { httpOnly: true }).json({
+      success: true,
+      message: "Password has been reset successfully! You are now logged in.",
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        userName: user.userName
+      }
+    });
   } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ success: false, message: "Failed to reset password" });
+    console.error("Error resetting password:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+    });
   }
 };
 
