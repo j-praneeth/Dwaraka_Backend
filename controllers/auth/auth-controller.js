@@ -196,6 +196,7 @@ const loginUser = async (req, res) => {
     // Compare the provided password with the hashed password in the database
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log("Invalid password attempt for user:", email); // Log invalid attempt
       return res.status(401).json({
         success: false,
         message: "Invalid credentials"
