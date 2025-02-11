@@ -118,4 +118,9 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
+// Reset password
+const resetPassword = async (req, res) => {
+  // Reset password logic...
+};
+
+module.exports = { registerUser, loginUser, logoutUser, authMiddleware, resetPassword };
