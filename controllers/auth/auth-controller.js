@@ -41,21 +41,24 @@ const loginUser = async (req, res) => {
 
   try {
     const checkUser = await User.findOne({ email });
-    if (!checkUser)
-      return res.json({
+    if (!checkUser) {
+      return res.status(404).json({
         success: false,
-        message: "User doesn't exists! Please register first",
+        message: "User doesn't exist! Please register first",
       });
+    }
 
     const checkPasswordMatch = await bcrypt.compare(
       password,
       checkUser.password
     );
-    if (!checkPasswordMatch)
-      return res.json({
+
+    if (!checkPasswordMatch) {
+      return res.status(401).json({
         success: false,
         message: "Incorrect password! Please try again",
       });
+    }
 
     const token = jwt.sign(
       {
@@ -68,25 +71,17 @@ const loginUser = async (req, res) => {
       { expiresIn: "60m" }
     );
 
-    // res.cookie("token", token, { httpOnly: true, secure: false }).json({
-    //   success: true,
-    //   message: "Logged in successfully",
-    //   user: {
-    //     email: checkUser.email,
-    //     role: checkUser.role,
-    //     id: checkUser._id,
-    //     userName: checkUser.userName,
-    //   },
-    // });
-    res.status(200).json({success:true, token})
+    return res.status(200).json({ success: true, token });
+
   } catch (e) {
-    console.log(e);
-    res.status(500).json({
+    console.error("Login error:", e);
+    return res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
+
 
 //logout
 
