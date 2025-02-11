@@ -171,47 +171,55 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  try {
-    const checkUser = await User.findOne({ email });
-    if (!checkUser)
-      return res.status(400).json({
-        success: false,
-        message: "User doesn't exist! Please register first",
-      });
+  // Validate input
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide email and password"
+    });
+  }
 
-    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
-    if (!checkPasswordMatch)
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Incorrect password! Please try again",
+        message: "Invalid credentials"
       });
+    }
 
+    // Compare the provided password with the hashed password in the database
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      console.log("Invalid password attempt for user:", email); // Log invalid attempt
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
+
+    // Create JWT token
     const token = jwt.sign(
-      {
-        id: checkUser._id,
-        role: checkUser.role,
-        email: checkUser.email,
-        userName: checkUser.userName,
-      },
-      "CLIENT_SECRET_KEY",
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
       { expiresIn: "60m" }
     );
 
-    res.cookie("token", token, { httpOnly: true, secure: false }).status(200).json({
+    res.cookie("token", token, { httpOnly: true }).json({
       success: true,
-      message: "Logged in successfully",
+      message: "Login successful",
       user: {
-        email: checkUser.email,
-        role: checkUser.role,
-        id: checkUser._id,
-        userName: checkUser.userName,
-      },
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        userName: user.userName
+      }
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Error logging in:", error);
     res.status(500).json({
       success: false,
-      message: "Some error occurred",
+      message: "Login failed"
     });
   }
 };
@@ -226,7 +234,64 @@ const logoutUser = (req, res) => {
 
 // Reset password
 const resetPassword = async (req, res) => {
-  // Reset password logic...
+  const { email, newPassword, confirmPassword } = req.body;
+
+  try {
+    // Validate input
+    if (!email || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required!",
+      });
+    }
+
+    // Check if new password and confirm password match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match!",
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found!",
+      });
+    }
+
+    // Hash the new password
+    user.password = await bcrypt.hash(newPassword, 12);
+    
+    // Update the user in the database
+    await user.save(); // This line updates the user's password in the database
+
+    // Log the user in with the new password
+    const token = jwt.sign(
+      { id: user._id, role: user.role, email: user.email },
+      process.env.JWT_SECRET || "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" }
+    );
+
+    res.cookie("token", token, { httpOnly: true }).json({
+      success: true,
+      message: "Password has been reset successfully! You are now logged in.",
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        userName: user.userName
+      }
+    });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+    });
+  }
 };
 
 // Middleware for authentication
