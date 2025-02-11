@@ -224,7 +224,12 @@ const logoutUser = (req, res) => {
   });
 };
 
-// Middleware to check authentication
+// Reset password
+const resetPassword = async (req, res) => {
+  // Reset password logic...
+};
+
+// Middleware for authentication
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
   if (!token)
@@ -247,4 +252,10 @@ const authMiddleware = async (req, res, next) => {
 
 app.post('/login', loginUser);
 
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
+module.exports = { 
+  registerUser, 
+  loginUser, 
+  logoutUser, 
+  resetPassword, 
+  authMiddleware 
+};
