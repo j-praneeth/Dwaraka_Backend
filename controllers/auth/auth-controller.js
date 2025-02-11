@@ -1,4 +1,3 @@
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
@@ -14,11 +13,10 @@ const registerUser = async (req, res) => {
         message: "User Already exists with the same email! Please try again",
       });
 
-    const hashPassword = await bcrypt.hash(password, 12);
     const newUser = new User({
       userName,
       email,
-      password: hashPassword,
+      password, // Storing password as plain text
     });
 
     await newUser.save();
@@ -30,7 +28,7 @@ const registerUser = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
@@ -48,12 +46,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const checkPasswordMatch = await bcrypt.compare(
-      password,
-      checkUser.password
-    );
-
-    if (!checkPasswordMatch) {
+    if (password !== checkUser.password) {
       return res.status(401).json({
         success: false,
         message: "Incorrect password! Please try again",
@@ -72,7 +65,6 @@ const loginUser = async (req, res) => {
     );
 
     return res.status(200).json({ success: true, token });
-
   } catch (e) {
     console.error("Login error:", e);
     return res.status(500).json({
@@ -82,9 +74,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-
 //logout
-
 const logoutUser = (req, res) => {
   res.clearCookie("token").json({
     success: true,
@@ -98,7 +88,7 @@ const authMiddleware = async (req, res, next) => {
   if (!token)
     return res.status(401).json({
       success: false,
-      message: "Unauthorised user!",
+      message: "Unauthorized user!",
     });
 
   try {
@@ -108,7 +98,7 @@ const authMiddleware = async (req, res, next) => {
   } catch (error) {
     res.status(401).json({
       success: false,
-      message: "Unauthorised user!",
+      message: "Unauthorized user!",
     });
   }
 };
