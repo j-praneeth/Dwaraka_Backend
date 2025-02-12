@@ -68,7 +68,7 @@ const loginUser = async (req, res) => {
 				email: user.email,
 				userName: user.userName,
 			},
-			"CLIENT_SECRET_KEY",
+			process.env.JWT_SECRET,
 			{ expiresIn: "60m" }
 		);
 
@@ -119,7 +119,7 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         // Verify JWT Token
-        const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         console.log("Decoded Token:", decoded); // Debugging
 
