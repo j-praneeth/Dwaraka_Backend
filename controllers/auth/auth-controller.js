@@ -75,10 +75,16 @@ const loginUser = async (req, res) => {
 		const { password: _, _id, ...userData } = user.toObject();
 
 		return res.status(200).json({
-			success: true,
-			user: userData,
-			token,
-		});
+            success: true,
+            message: "Login successful",
+            user: {
+                id: _id,
+                email: user.email,
+                role: user.role,
+                userName: user.userName,
+            },
+            token,
+        });
 	} catch (error) {
 		console.error("Login error:", error);
 		res.status(500).json({
