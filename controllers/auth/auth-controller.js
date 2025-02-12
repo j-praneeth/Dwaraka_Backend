@@ -171,35 +171,35 @@ const User = require("../../models/User");
 
 //register
 const registerUser = async (req, res) => {
-  const { userName, email, password } = req.body;
+	const { userName, email, password } = req.body;
 
-  try {
-    const checkUser = await User.findOne({ email });
-    if (checkUser)
-      return res.json({
-        success: false,
-        message: "User Already exists with the same email! Please try again",
-      });
+	try {
+		const checkUser = await User.findOne({ email });
+		if (checkUser)
+			return res.json({
+				success: false,
+				message: "User Already exists with the same email! Please try again",
+			});
 
-    const hashPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({
-      userName,
-      email,
-      password: hashPassword,
-    });
+		const hashPassword = await bcrypt.hash(password, 12);
+		const newUser = new User({
+			userName,
+			email,
+			password: hashPassword,
+		});
 
-    await newUser.save();
-    res.status(200).json({
-      success: true,
-      message: "Registration successful",
-    });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({
-      success: false,
-      message: "Some error occured",
-    });
-  }
+		await newUser.save();
+		res.status(200).json({
+			success: true,
+			message: "Registration successful",
+		});
+	} catch (e) {
+		console.log(e);
+		res.status(500).json({
+			success: false,
+			message: "Some error occured",
+		});
+	}
 };
 
 //login
@@ -237,16 +237,16 @@ const loginUser = async (req, res) => {
 		const { password: _, _id: id, ...userData } = user.toObject();
 
 		return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: {
-                id,
-                email: user.email,
-                role: user.role,
-                userName: user.userName,
-            },
-            token,
-        });
+			success: true,
+			message: "Login successful",
+			user: {
+				id,
+				email: user.email,
+				role: user.role,
+				userName: user.userName,
+			},
+			token,
+		});
 	} catch (error) {
 		console.error("Login error:", error);
 		res.status(500).json({
@@ -257,56 +257,51 @@ const loginUser = async (req, res) => {
 };
 
 //logout
-
 const logoutUser = (req, res) => {
-  res.clearCookie("token").json({
-    success: true,
-    message: "Logged out successfully!",
-  });
+	res.clearCookie("token").json({
+		success: true,
+		message: "Logged out successfully!",
+	});
 };
 
 //auth middleware
-const authMiddleware = async (req, res, next) => {
-  const token = req.cookies.token;
-  if (!token)
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorised user!",
-    });
+const authMiddleware = (req, res, next) => {
+	const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
-  try {
-    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: "Unauthorised user!",
-    });
-  }
+	if (!token) {
+		return res.status(401).json({ success: false, message: "Unauthorized user!" });
+	}
+
+	try {
+		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		req.user = decoded; // Attach user info to the request
+		next();
+	} catch (error) {
+		return res.status(401).json({ success: false, message: "Unauthorized user!" });
+	}
 };
 
 // ✅ Reset Password
 const resetPassword = async (req, res) => {
-    const { email, newPassword } = req.body;
+	const { email, newPassword } = req.body;
 
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found. Please check the email provided.",
-            });
-        }
+	try {
+		const user = await User.findOne({ email });
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				message: "User not found. Please check the email provided.",
+			});
+		}
 
-        user.password = await bcrypt.hash(newPassword, 12);
-        await user.save();
+		user.password = await bcrypt.hash(newPassword, 12);
+		await user.save();
 
-        return res.status(200).json({ success: true, message: "Password changed successfully." });
-    } catch (error) {
-        console.error("Reset password error:", error);
-        return res.status(500).json({ success: false, message: "Some error occurred" });
-    }
+		return res.status(200).json({ success: true, message: "Password changed successfully." });
+	} catch (error) {
+		console.error("Reset password error:", error);
+		return res.status(500).json({ success: false, message: "Some error occurred" });
+	}
 };
 
 module.exports = { registerUser, loginUser, logoutUser, authMiddleware, resetPassword };
