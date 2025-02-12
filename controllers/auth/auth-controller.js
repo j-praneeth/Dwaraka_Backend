@@ -4,197 +4,119 @@ const User = require("../../models/User");
 
 // register
 const registerUser = async (req, res) => {
-	const { userName, email, password } = req.body;
+  const { userName, email, password } = req.body;
 
-	try {
-		const checkUser = await User.findOne({ email });
-		if (checkUser)
-			return res.json({
-				success: false,
-				message:
-					"User Already exists with the same email! Please try again",
-			});
+  try {
+    const checkUser = await User.findOne({ email });
+    if (checkUser)
+      return res.json({
+        success: false,
+        message:
+          "User Already exists with the same email! Please try again",
+      });
 
-		// Hash the password before saving
-		const hashPassword = await bcrypt.hash(password, 12);
-		const newUser = new User({
-			userName,
-			email,
-			password: hashPassword,
-		});
+    // Hash the password before saving
+    const hashPassword = await bcrypt.hash(password, 12);
+    const newUser = new User({
+      userName,
+      email,
+      password: hashPassword,
+    });
 
-		await newUser.save();
+    await newUser.save();
 
-		const { password: _, _id, ...userData } = newUser.toObject();
+    const { password: _, _id, ...userData } = newUser.toObject();
 
-		res.status(200).json({
-			success: true,
-			message: "Registration successful",
-			user: userData,
-		});
-	} catch (e) {
-		console.log(e);
-		res.status(500).json({
-			success: false,
-			message: "Some error occurred",
-		});
-	}
+    res.status(200).json({
+      success: true,
+      message: "Registration successful",
+      user: userData,
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
+      message: "Some error occurred",
+    });
+  }
 };
 
 // login
-
 const loginUser = async (req, res) => {
-	const { email, password } = req.body;
+  const { email, password } = req.body;
 
-	try {
-		const checkUser = await User.findOne({ email });
-		if (!checkUser) {
-			return res.status(404).json({
-				success: false,
-				message: "User doesn't exist! Please register first",
-			});
-		}
+  try {
+    const checkUser = await User.findOne({ email });
+    if (!checkUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User doesn't exist! Please register first",
+      });
+    }
 
-		// Compare the hashed password
-		const isMatch = await bcrypt.compare(password, checkUser.password);
-		if (!isMatch) {
-			return res.status(401).json({
-				success: false,
-				message: "Incorrect password! Please try again",
-			});
-		}
+    // Compare the hashed password
+    const isMatch = await bcrypt.compare(password, checkUser.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect password! Please try again",
+      });
+    }
 
-		const token = jwt.sign(
-			{
-				id: checkUser._id,
-				role: checkUser.role,
-				email: checkUser.email,
-				userName: checkUser.userName,
-			},
-			"CLIENT_SECRET_KEY",
-			{ expiresIn: "60m" }
-		);
+    const token = jwt.sign(
+      {
+        id: checkUser._id,
+        role: checkUser.role,
+        email: checkUser.email,
+        userName: checkUser.userName,
+      },
+      "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" }
+    );
 
-		// ✅ Fix: Use checkUser instead of newUser
-		const { password: _, _id, ...userData } = checkUser.toObject();
+    const { password: _, _id, ...userData } = newUser.toObject();
 
-		return res.status(200).json({
-			success: true,
-			token,
-			user: userData,
-		});
-	} catch (e) {
-		console.error("Login error:", e);
-		return res.status(500).json({
-			success: false,
-			message: "Some error occurred",
-		});
-	}
+    return res.status(200).json({
+      success: true,
+      token,
+      user: userData,
+    });
+  } catch (e) {
+    console.error("Login error:", e);
+    return res.status(500).json({
+      success: false,
+      message: "Some error occurred",
+    });
+  }
 };
-
-
-// const loginUser = async (req, res) => {
-// 	const { email, password } = req.body;
-
-// 	try {
-// 		const checkUser = await User.findOne({ email });
-// 		if (!checkUser) {
-// 			return res.status(404).json({
-// 				success: false,
-// 				message: "User doesn't exist! Please register first",
-// 			});
-// 		}
-
-// 		// Compare the hashed password
-// 		const isMatch = await bcrypt.compare(password, checkUser.password);
-// 		if (!isMatch) {
-// 			return res.status(401).json({
-// 				success: false,
-// 				message: "Incorrect password! Please try again",
-// 			});
-// 		}
-
-// 		const token = jwt.sign(
-// 			{
-// 				id: checkUser._id,
-// 				role: checkUser.role,
-// 				email: checkUser.email,
-// 				userName: checkUser.userName,
-// 			},
-// 			"CLIENT_SECRET_KEY",
-// 			{ expiresIn: "60m" }
-// 		);
-
-// 		const { password: _, _id, ...userData } = newUser.toObject();
-
-// 		return res.status(200).json({
-// 			success: true,
-// 			token,
-// 			user: userData,
-// 		});
-// 	} catch (e) {
-// 		console.error("Login error:", e);
-// 		return res.status(500).json({
-// 			success: false,
-// 			message: "Some error occurred",
-// 		});
-// 	}
-// };
 
 // logout
 const logoutUser = (req, res) => {
-	res.clearCookie("token").json({
-		success: true,
-		message: "Logged out successfully!",
-	});
+  res.clearCookie("token").json({
+    success: true,
+    message: "Logged out successfully!",
+  });
 };
 
 // auth middleware
 const authMiddleware = async (req, res, next) => {
-	const token = req.cookies.token;
-	if (!token)
-		return res.status(401).json({
-			success: false,
-			message: "Unauthorized user!",
-		});
+  const token = req.cookies.token;
+  if (!token)
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorized user!",
+    });
 
-	try {
-		const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
-		req.user = decoded;
-		next();
-	} catch (error) {
-		res.status(401).json({
-			success: false,
-			message: "Unauthorized user!",
-		});
-	}
+  try {
+    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: "Unauthorized user!",
+    });
+  }
 };
 
-const resetPassword = async (req, res) => {
-	const { email, newPassword } = req.body;
-
-	try {
-		const user = await User.findOne({ email });
-		if (!user)
-			return res.status(404).json({
-				success: false,
-				message: "User not found. Please check the email provided.",
-			});
-
-		user.password = await bcrypt.hash(newPassword, 12);
-		await user.save();
-
-		return res.status(200).json({
-			success: true,
-			message: "Password changed successfully.",
-		});
-	} catch (e) {
-		console.error("Reset password error:", e);
-		return res.status(500).json({
-			success: false,
-			message: "Some error occurred",
-		});
-	}
-};
-
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware, resetPassword };
+module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
