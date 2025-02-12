@@ -169,111 +169,120 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
-const SECRET_KEY = process.env.CLIENT_SECRET_KEY || "my_super_secret_key"; // Ensure same key is used
-
-// ✅ Register User
+//register
 const registerUser = async (req, res) => {
-    const { userName, email, password } = req.body;
+  const { userName, email, password } = req.body;
 
-    try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "User already exists with the same email!",
-            });
-        }
+  try {
+    const checkUser = await User.findOne({ email });
+    if (checkUser)
+      return res.json({
+        success: false,
+        message: "User Already exists with the same email! Please try again",
+      });
 
-        const hashPassword = await bcrypt.hash(password, 12);
-        const newUser = new User({ userName, email, password: hashPassword });
-
-        await newUser.save();
-
-        const { password: _, _id, ...userData } = newUser.toObject();
-        res.status(201).json({
-            success: true,
-            message: "Registration successful",
-            user: userData,
-        });
-    } catch (error) {
-        console.error("Registration error:", error);
-        res.status(500).json({ success: false, message: "Some error occurred" });
-    }
-};
-
-// ✅ Login User
-const loginUser = async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email: email.toLowerCase() });
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User doesn't exist! Please register first",
-            });
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                success: false,
-                message: "Incorrect password! Please try again",
-            });
-        }
-
-        const token = jwt.sign(
-            { id: user._id, role: user.role, email: user.email, userName: user.userName },
-            SECRET_KEY,
-            { expiresIn: "2h" }
-        );
-
-        const { password: _, _id: id, ...userData } = user.toObject();
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: { id, email: user.email, role: user.role, userName: user.userName },
-            token,
-        });
-    } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ success: false, message: "Some error occurred" });
-    }
-};
-
-// ✅ Logout User
-const logoutUser = (req, res) => {
-    res.clearCookie("token").json({
-        success: true,
-        message: "Logged out successfully!",
+    const hashPassword = await bcrypt.hash(password, 12);
+    const newUser = new User({
+      userName,
+      email,
+      password: hashPassword,
     });
+
+    await newUser.save();
+    res.status(200).json({
+      success: true,
+      message: "Registration successful",
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
+      message: "Some error occured",
+    });
+  }
 };
 
-// ✅ Auth Middleware for Protecting Routes
+//login
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const checkUser = await User.findOne({ email });
+    if (!checkUser)
+      return res.json({
+        success: false,
+        message: "User doesn't exists! Please register first",
+      });
+
+    const checkPasswordMatch = await bcrypt.compare(
+      password,
+      checkUser.password
+    );
+    if (!checkPasswordMatch)
+      return res.json({
+        success: false,
+        message: "Incorrect password! Please try again",
+      });
+
+    const token = jwt.sign(
+      {
+        id: checkUser._id,
+        role: checkUser.role,
+        email: checkUser.email,
+        userName: checkUser.userName,
+      },
+      "CLIENT_SECRET_KEY",
+      { expiresIn: "60m" }
+    );
+
+    // res.cookie("token", token, { httpOnly: true, secure: false }).json({
+    //   success: true,
+    //   message: "Logged in successfully",
+    //   user: {
+    //     email: checkUser.email,
+    //     role: checkUser.role,
+    //     id: checkUser._id,
+    //     userName: checkUser.userName,
+    //   },
+    // });
+    res.status(200).json({success:true, token, user: userData,})
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
+      message: "Some error occured",
+    });
+  }
+};
+
+//logout
+
+const logoutUser = (req, res) => {
+  res.clearCookie("token").json({
+    success: true,
+    message: "Logged out successfully!",
+  });
+};
+
+//auth middleware
 const authMiddleware = async (req, res, next) => {
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+  const token = req.cookies.token;
+  if (!token)
+    return res.status(401).json({
+      success: false,
+      message: "Unauthorised user!",
+    });
 
-    console.log("Received Token:", token); // Debugging
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: "Unauthorized user! No token provided." });
-    }
-
-    try {
-        const decoded = jwt.verify(token, SECRET_KEY);
-        console.log("Decoded Token:", decoded); // Debugging
-
-        req.user = decoded; // Attach user data to request object
-        next();
-    } catch (error) {
-        console.error("JWT Verification Error:", error);
-
-        if (error.name === "TokenExpiredError") {
-            return res.status(401).json({ success: false, message: "Session expired! Please log in again." });
-        }
-
-        return res.status(401).json({ success: false, message: "Unauthorized user! Invalid token." });
-    }
+  try {
+    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: "Unauthorised user!",
+    });
+  }
 };
 
 // ✅ Reset Password
