@@ -7,15 +7,14 @@ const registerUser = async (req, res) => {
 	const { userName, email, password } = req.body;
 
 	try {
-		const checkUser = await User.findOne({ email });
-		if (checkUser)
-			return res.json({
+		const existingUser = await User.findOne({ email });
+		if (existingUser) {
+			return res.status(400).json({
 				success: false,
-				message:
-					"User Already exists with the same email! Please try again",
+				message: "User already exists with the same email!",
 			});
+		}
 
-		// Hash the password before saving
 		const hashPassword = await bcrypt.hash(password, 12);
 		const newUser = new User({
 			userName,
@@ -27,13 +26,13 @@ const registerUser = async (req, res) => {
 
 		const { password: _, _id, ...userData } = newUser.toObject();
 
-		res.status(200).json({
+		res.status(201).json({
 			success: true,
 			message: "Registration successful",
 			user: userData,
 		});
-	} catch (e) {
-		console.log(e);
+	} catch (error) {
+		console.error("Registration error:", error);
 		res.status(500).json({
 			success: false,
 			message: "Some error occurred",
@@ -46,17 +45,16 @@ const loginUser = async (req, res) => {
 	const { email, password } = req.body;
 
 	try {
-		const checkUser = await User.findOne({ email });
-		if (!checkUser) {
+		const user = await User.findOne({ email });
+		if (!user) {
 			return res.status(404).json({
 				success: false,
 				message: "User doesn't exist! Please register first",
 			});
 		}
 
-		// Compare the hashed password
-		const isMatch = await bcrypt.compare(password, checkUser.password);
-		if (!isMatch) {
+		const isPasswordValid = await bcrypt.compare(password, user.password);
+		if (!isPasswordValid) {
 			return res.status(401).json({
 				success: false,
 				message: "Incorrect password! Please try again",
@@ -65,26 +63,25 @@ const loginUser = async (req, res) => {
 
 		const token = jwt.sign(
 			{
-				id: checkUser._id,
-				role: checkUser.role,
-				email: checkUser.email,
-				userName: checkUser.userName,
+				id: user._id,
+				role: user.role,
+				email: user.email,
+				userName: user.userName,
 			},
 			"CLIENT_SECRET_KEY",
 			{ expiresIn: "60m" }
 		);
 
-		// Correcting the destructuring of user data
-		const { password: _, _id, ...userData } = checkUser.toObject();
+		const { password: _, _id, ...userData } = user.toObject();
 
 		return res.status(200).json({
 			success: true,
 			user: userData,
 			token,
 		});
-	} catch (e) {
-		console.error("Login error:", e);
-		return res.status(500).json({
+	} catch (error) {
+		console.error("Login error:", error);
+		res.status(500).json({
 			success: false,
 			message: "Some error occurred",
 		});
