@@ -24,9 +24,13 @@ const registerUser = async (req, res) => {
     });
 
     await newUser.save();
+
+    const { password: _, _id, ...userData } = newUser.toObject();
+
     res.status(200).json({
       success: true,
       message: "Registration successful",
+      user: userData,
     });
   } catch (e) {
     console.log(e);
@@ -70,7 +74,13 @@ const loginUser = async (req, res) => {
       { expiresIn: "60m" }
     );
 
-    return res.status(200).json({ success: true, token });
+    const { password: _, _id, ...userData } = newUser.toObject();
+
+    return res.status(200).json({
+      success: true,
+      token,
+      user: userData,
+    });
   } catch (e) {
     console.error("Login error:", e);
     return res.status(500).json({
