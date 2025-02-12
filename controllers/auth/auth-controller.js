@@ -267,6 +267,7 @@ const logoutUser = (req, res) => {
 //auth middleware
 const authMiddleware = (req, res, next) => {
 	const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+	console.log("Received Token:", token); // Log the token
 
 	if (!token) {
 		return res.status(401).json({ success: false, message: "Unauthorized user!" });
@@ -274,9 +275,11 @@ const authMiddleware = (req, res, next) => {
 
 	try {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		console.log("Decoded Token:", decoded); // Log the decoded token
 		req.user = decoded; // Attach user info to the request
 		next();
 	} catch (error) {
+		console.error("JWT Verification Error:", error); // Log the error
 		return res.status(401).json({ success: false, message: "Unauthorized user!" });
 	}
 };
