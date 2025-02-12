@@ -230,7 +230,7 @@ const loginUser = async (req, res) => {
 				email: user.email,
 				userName: user.userName,
 			},
-			process.env.JWT_SECRET,
+			"CLIENT_SECRET_KEY",
 		);
 
 		const { password: _, _id: id, ...userData } = user.toObject();
@@ -273,7 +273,7 @@ const authMiddleware = (req, res, next) => {
 	}
 
 	try {
-		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
 		console.log("Decoded Token:", decoded); // Log the decoded token
 		req.user = decoded; // Attach user info to the request
 		next();
