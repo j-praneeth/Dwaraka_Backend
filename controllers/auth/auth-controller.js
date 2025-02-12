@@ -230,7 +230,7 @@ const loginUser = async (req, res) => {
 				email: user.email,
 				userName: user.userName,
 			},
-			"CLIENT_SECRET_KEY",
+			process.env.CLIENT_SECRET_KEY,
 		);
 
 		const { password: _, _id: id, ...userData } = user.toObject();
