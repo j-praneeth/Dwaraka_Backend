@@ -231,7 +231,6 @@ const loginUser = async (req, res) => {
 				userName: user.userName,
 			},
 			process.env.CLIENT_SECRET_KEY,
-			{ expiresIn: "2h" }
 		);
 
 		const { password: _, _id: id, ...userData } = user.toObject();
