@@ -74,12 +74,13 @@ const loginUser = async (req, res) => {
 			{ expiresIn: "60m" }
 		);
 
-		const { password: _, _id, ...userData } = newUser.toObject();
+		// Correcting the destructuring of user data
+		const { password: _, _id, ...userData } = checkUser.toObject();
 
 		return res.status(200).json({
 			success: true,
-			token,
 			user: userData,
+			token,
 		});
 	} catch (e) {
 		console.error("Login error:", e);
@@ -89,6 +90,7 @@ const loginUser = async (req, res) => {
 		});
 	}
 };
+
 
 // logout
 const logoutUser = (req, res) => {
