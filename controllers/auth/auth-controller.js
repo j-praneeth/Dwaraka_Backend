@@ -69,7 +69,7 @@ const loginUser = async (req, res) => {
 				userName: user.userName,
 			},
 			"CLIENT_SECRET_KEY",
-			{ expiresIn: "60m" }
+			{ expiresIn: "2h" }
 		);
 
 		const { password: _, _id: id, ...userData } = user.toObject();
@@ -105,24 +105,35 @@ const logoutUser = (req, res) => {
 
 // auth middleware
 const authMiddleware = async (req, res, next) => {
-	const token = req.cookies.token;
-	if (!token)
-	  return res.status(401).json({
-		success: false,
-		message: "Unauthorised user!",
-	  });
-  
-	try {
-	  const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
-	  req.user = decoded;
-	  next();
-	} catch (error) {
-	  res.status(401).json({
-		success: false,
-		message: "Unauthorised user!",
-	  });
-	}
-  };
+    // Retrieve token from cookies or Authorization header
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+
+    console.log("Received Token:", token); // Debugging
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized user! No token provided.",
+        });
+    }
+
+    try {
+        // Verify JWT Token
+        const decoded = jwt.verify(token, process.env.CLIENT_SECRET_KEY);
+
+        console.log("Decoded Token:", decoded); // Debugging
+
+        req.user = decoded; // Attach user data to request object
+        next();
+    } catch (error) {
+        console.error("JWT Verification Error:", error);
+
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized user! Invalid or expired token.",
+        });
+    }
+};
 
 const resetPassword = async (req, res) => {
 	const { email, newPassword } = req.body;
