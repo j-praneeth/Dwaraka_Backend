@@ -200,9 +200,10 @@ const loginUser = async (req, res) => {
         id: checkUser._id,
         userName: checkUser.userName,
       },
+      token,
     });
 
-    res.status(200).json({success:true, token, user: userData,})
+    res.status(200).json({ success: true, token, user: checkUser });
   } catch (e) {
     console.log(e);
     res.status(500).json({
