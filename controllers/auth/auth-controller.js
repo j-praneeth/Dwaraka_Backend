@@ -72,13 +72,13 @@ const loginUser = async (req, res) => {
 			{ expiresIn: "60m" }
 		);
 
-		const { password: _, _id, ...userData } = user.toObject();
+		const { password: _, _id: id, ...userData } = user.toObject();
 
 		return res.status(200).json({
             success: true,
             message: "Login successful",
             user: {
-                id: _id,
+                id,
                 email: user.email,
                 role: user.role,
                 userName: user.userName,
