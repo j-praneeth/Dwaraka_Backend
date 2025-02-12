@@ -42,6 +42,7 @@ const registerUser = async (req, res) => {
 };
 
 // login
+
 const loginUser = async (req, res) => {
 	const { email, password } = req.body;
 
@@ -74,7 +75,8 @@ const loginUser = async (req, res) => {
 			{ expiresIn: "60m" }
 		);
 
-		const { password: _, _id, ...userData } = newUser.toObject();
+		// ✅ Fix: Use checkUser instead of newUser
+		const { password: _, _id, ...userData } = checkUser.toObject();
 
 		return res.status(200).json({
 			success: true,
@@ -89,6 +91,55 @@ const loginUser = async (req, res) => {
 		});
 	}
 };
+
+
+// const loginUser = async (req, res) => {
+// 	const { email, password } = req.body;
+
+// 	try {
+// 		const checkUser = await User.findOne({ email });
+// 		if (!checkUser) {
+// 			return res.status(404).json({
+// 				success: false,
+// 				message: "User doesn't exist! Please register first",
+// 			});
+// 		}
+
+// 		// Compare the hashed password
+// 		const isMatch = await bcrypt.compare(password, checkUser.password);
+// 		if (!isMatch) {
+// 			return res.status(401).json({
+// 				success: false,
+// 				message: "Incorrect password! Please try again",
+// 			});
+// 		}
+
+// 		const token = jwt.sign(
+// 			{
+// 				id: checkUser._id,
+// 				role: checkUser.role,
+// 				email: checkUser.email,
+// 				userName: checkUser.userName,
+// 			},
+// 			"CLIENT_SECRET_KEY",
+// 			{ expiresIn: "60m" }
+// 		);
+
+// 		const { password: _, _id, ...userData } = newUser.toObject();
+
+// 		return res.status(200).json({
+// 			success: true,
+// 			token,
+// 			user: userData,
+// 		});
+// 	} catch (e) {
+// 		console.error("Login error:", e);
+// 		return res.status(500).json({
+// 			success: false,
+// 			message: "Some error occurred",
+// 		});
+// 	}
+// };
 
 // logout
 const logoutUser = (req, res) => {
