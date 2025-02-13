@@ -390,7 +390,7 @@ const requestReturn = async (req, res) => {
       });
     }
 
-    if (order.userId.toString() !== req.user._id.toString()) {
+    if (order.userId.toString() !== userId.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized: Not your order"
