@@ -240,14 +240,15 @@ const capturePayment = async (req, res) => {
 const getAllOrdersByUser = async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log(userId);
 
     // Verify that the requesting user is accessing their own orders
-    if (req.user._id.toString() !== userId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Unauthorized: Can only access your own orders" 
-      });
-    }
+    // if (req.user._id !== userId) {
+    //   return res.status(403).json({ 
+    //     success: false, 
+    //     message: "Unauthorized: Can only access your own orders" 
+    //   });
+    // }
 
     const orders = await Order.find({ userId })
       .sort({ createdAt: -1 })
