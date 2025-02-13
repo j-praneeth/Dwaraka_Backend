@@ -371,6 +371,7 @@ const requestReturn = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { reason, description, images } = req.body;
+    const userId = req.user.id; // Extract userId from authenticated request
 
     // Validate input
     if (!reason) {
@@ -424,6 +425,7 @@ const requestReturn = async (req, res) => {
     });
   }
 };
+
 
 // Process return request (Admin only)
 const processReturnRequest = async (req, res) => {
