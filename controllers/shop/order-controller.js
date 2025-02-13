@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const createOrder = async (req, res) => {
   try {
     const {
+      userId,
       cartItems,
       addressInfo,
       totalAmount,
@@ -105,7 +106,7 @@ const createOrder = async (req, res) => {
 
     // Create order in our database
     const newOrder = new Order({
-      userId: req.user._id,
+      userId: userId,
       cartId,
       cartItems: cartItems.map(item => ({
         productId: item.productId,
@@ -243,7 +244,7 @@ const getAllOrdersByUser = async (req, res) => {
     console.log(userId);
 
     // Verify that the requesting user is accessing their own orders
-    // if (req.user._id !== userId) {
+    // if (req.user._id.toString() !== userId) {
     //   return res.status(403).json({ 
     //     success: false, 
     //     message: "Unauthorized: Can only access your own orders" 
