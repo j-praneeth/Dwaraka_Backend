@@ -37,7 +37,7 @@ router.delete("/return/:orderId/cancel", cancelReturnRequest);
 router.put("/tracking/:orderId", updateOrderTracking);
 
 // Return routes
-router.post("/return/:orderId", requestReturn);
+router.post("/return/request/:orderId", requestReturn);
 router.post("/return/:orderId/process", processReturnRequest);
 router.put("/return/:orderId/tracking", updateReturnTracking);
 
