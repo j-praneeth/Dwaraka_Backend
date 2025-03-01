@@ -14,41 +14,18 @@ const createDefaultCategories = async (req, res) => {
   const defaultCategories = ["All Categories", "Silk", "Handlooms", "Cotton Sarees", "Tops", "Fancy"];
 
   try {
-    const createdCategories = [];
-    const existingCategories = [];
-
     for (const categoryName of defaultCategories) {
-      if (typeof categoryName !== 'string' || !categoryName.trim()) {
-        console.error(`Invalid category name: ${categoryName}`);
-        continue;
-      }
-
-      const trimmedName = categoryName.trim();
-      const escapedName = trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      console.log(`Checking for category: ${trimmedName}`);
-
-      try {
-        const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${escapedName}$`, 'i') } });
-        if (!existingCategory) {
-          const newCategory = new Category({ name: trimmedName });
-          await newCategory.save();
-          createdCategories.push(trimmedName);
-          console.log(`Created category: ${trimmedName}`);
-        } else {
-          existingCategories.push(trimmedName);
-          console.log(`Category already exists: ${trimmedName}`);
-        }
-      } catch (categoryError) {
-        console.error(`Error processing category ${trimmedName}:`, categoryError);
+      console.log(`Checking for category: ${categoryName}`);
+      const existingCategory = await Category.findOne({ name: categoryName });
+      if (!existingCategory) {
+        const newCategory = new Category({ name: categoryName });
+        await newCategory.save();
+        console.log(`Created category: ${categoryName}`);
+      } else {
+        console.log(`Category already exists: ${categoryName}`);
       }
     }
-
-    res.status(200).json({
-      success: true,
-      message: "Default categories processed",
-      created: createdCategories,
-      existing: existingCategories
-    });
+    res.status(200).json({ success: true, message: "Default categories ensured" });
   } catch (error) {
     console.error('Error creating categories:', error);
     res.status(500).json({ success: false, message: "Failed to create categories", error: error.message });
@@ -58,4 +35,4 @@ const createDefaultCategories = async (req, res) => {
 module.exports = {
   fetchCategories,
   createDefaultCategories,
-};
+}; 

@@ -83,44 +83,11 @@ const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
 
   try {
-    if (!category) {
-      return res.status(400).json({
-        success: false,
-        message: "Category parameter is required"
-      });
-    }
-
-    // Decode the URL-encoded category name
-    const decodedCategory = decodeURIComponent(category);
-    console.log(`Searching for products in category: ${decodedCategory}`);
-
-    // Create a case-insensitive query that matches the category name exactly
-    const products = await Product.find({
-      category: new RegExp(`^${decodedCategory}$`, 'i')
-    });
-
-    console.log(`Found ${products.length} products in category: ${decodedCategory}`);
-
-    if (!products || products.length === 0) {
-      console.log(`No products found in category: ${decodedCategory}`);
-      return res.status(404).json({
-        success: false,
-        message: `No products found in category: ${decodedCategory}`
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: products,
-      count: products.length
-    });
+    const products = await Product.find({ category }); // Assuming your Product model has a category field
+    res.status(200).json({ success: true, data: products });
   } catch (error) {
     console.error('Error fetching products by category:', error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch products",
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch products" });
   }
 };
 
