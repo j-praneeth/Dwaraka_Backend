@@ -83,15 +83,26 @@ const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
 
   try {
-    // Decode the URL-encoded category name and escape special regex characters
-    const decodedCategory = decodeURIComponent(category).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Category parameter is required"
+      });
+    }
 
-    // Use case-insensitive regex for flexible matching with the decoded category
+    // Decode the URL-encoded category name
+    const decodedCategory = decodeURIComponent(category);
+    console.log(`Searching for products in category: ${decodedCategory}`);
+
+    // Create a case-insensitive query that matches the category name exactly
     const products = await Product.find({
-      category: { $regex: new RegExp('^' + decodedCategory + '$', 'i') }
+      category: new RegExp(`^${decodedCategory}$`, 'i')
     });
 
+    console.log(`Found ${products.length} products in category: ${decodedCategory}`);
+
     if (!products || products.length === 0) {
+      console.log(`No products found in category: ${decodedCategory}`);
       return res.status(404).json({
         success: false,
         message: `No products found in category: ${decodedCategory}`
