@@ -1,6 +1,5 @@
 const { imageUploadUtil } = require("../../helpers/cloudinary");
 const Product = require("../../models/Product");
-const Category = require("../../models/Category");
 
 const handleImageUpload = async (req, res) => {
   try {
@@ -36,20 +35,13 @@ const addProduct = async (req, res) => {
       averageReview,
     } = req.body;
 
-    // Validate if the category exists
-    const existingCategory = await Category.findOne({ name: category });
-    if (!existingCategory) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid category. Please select from the predefined categories.",
-      });
-    }
+    console.log(averageReview, "averageReview");
 
     const newlyCreatedProduct = new Product({
       image,
       title,
       description,
-      category: existingCategory.name,
+      category,
       brand,
       price,
       salePrice,
@@ -111,31 +103,6 @@ const editProduct = async (req, res) => {
         success: false,
         message: "Product not found",
       });
-
-    // Validate category if it's being updated
-    if (category) {
-      // First try exact match
-      let existingCategory = await Category.findOne({ name: category });
-      
-      // If no exact match, try case-insensitive match
-      if (!existingCategory) {
-        existingCategory = await Category.findOne({
-          name: { $regex: new RegExp('^' + category.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') }
-        });
-      }
-
-      if (!existingCategory) {
-        const availableCategories = await Category.find({}).select('name -_id');
-        return res.status(400).json({
-          success: false,
-          message: `Invalid category '${category}'. Please select from the predefined categories: ${availableCategories.map(c => c.name).join(', ')}.`,
-          availableCategories: availableCategories.map(c => c.name)
-        });
-      }
-
-      // Use the exact name from the database to maintain consistency
-      category = existingCategory.name;
-    }
 
     findProduct.title = title || findProduct.title;
     findProduct.description = description || findProduct.description;
