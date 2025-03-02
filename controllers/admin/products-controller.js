@@ -1,5 +1,6 @@
 const { imageUploadUtil } = require("../../helpers/cloudinary");
 const Product = require("../../models/Product");
+const Category = require("../../models/Category");
 
 const handleImageUpload = async (req, res) => {
   try {
@@ -35,7 +36,14 @@ const addProduct = async (req, res) => {
       averageReview,
     } = req.body;
 
-    console.log(averageReview, "averageReview");
+    // Validate if the category exists in the database
+    const existingCategory = await Category.findOne({ name: category });
+    if (!existingCategory) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category selected",
+      });
+    }
 
     const newlyCreatedProduct = new Product({
       image,
@@ -103,6 +111,17 @@ const editProduct = async (req, res) => {
         success: false,
         message: "Product not found",
       });
+
+    // Validate category if it's being updated
+    if (category) {
+      const existingCategory = await Category.findOne({ name: category });
+      if (!existingCategory) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid category selected",
+        });
+      }
+    }
 
     findProduct.title = title || findProduct.title;
     findProduct.description = description || findProduct.description;
