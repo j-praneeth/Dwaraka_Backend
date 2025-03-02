@@ -12,7 +12,11 @@ const OrderSchema = new mongoose.Schema({
   orderDate: { type: Date, default: Date.now },
   paymentMethod: String,
   paymentStatus: String,
-  orderStatus: { type: String, enum: ['pending', 'confirmed', 'rejected', 'returned', 'delivered'], default: 'pending' },
+  orderStatus: { type: String, enum: ['pending', 'confirmed', 'rejected', 'returned', 'delivered', 'cancelled'], default: 'pending' },
+  cancellationInfo: {
+    reason: { type: String, default: "You Cancelled this order." },
+    cancelledAt: { type: Date, default: Date.now },
+  },
   addressInfo: {
     address: String,
     city: String,

@@ -30,6 +30,9 @@ router.get("/details/:id", getOrderDetails);
 // New route for fetching all return requests
 router.get("/returns", getAllReturnRequests);
 
+// Route for canceling an order
+router.put("/cancel/:orderId", cancelOrder);
+
 // New route for canceling a return request
 router.delete("/return/:orderId/cancel", cancelReturnRequest);
 

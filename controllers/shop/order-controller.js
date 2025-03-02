@@ -645,6 +645,51 @@ const updateRefundStatus = async (req, res) => {
   }
 };
 
+// Cancel an order
+const cancelOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Check if order can be cancelled (only pending or confirmed orders can be cancelled)
+    // if (!['pending', 'confirmed'].includes(order.orderStatus)) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: `Order cannot be cancelled in ${order.orderStatus} status`
+    //   });
+    // }
+
+    // Update order status and add cancellation info
+    order.orderStatus = 'cancelled';
+    order.cancellationInfo = {
+      reason: "You Canceled this order.",
+      cancelledAt: new Date()
+    };
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: order
+    });
+  } catch (error) {
+    console.error("Error cancelling order:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
@@ -657,5 +702,6 @@ module.exports = {
   getAllReturnRequests,
   cancelReturnRequest,
   updateReturnStatus,
-  updateRefundStatus
+  updateRefundStatus,
+  cancelOrder // Add cancelOrder to exports
 };
