@@ -114,14 +114,14 @@ const editProduct = async (req, res) => {
 
     // Validate if the category exists in the database
     if (category) {
-      const existingCategory = await Category.findOne({ _id: category });
+      const existingCategory = await Category.findOne({ name: category });
       if (!existingCategory) {
         return res.status(400).json({
           success: false,
           message: "Invalid category selected",
         });
       }
-      findProduct.category = existingCategory.name;
+      findProduct.category = category;
     }
 
     findProduct.title = title || findProduct.title;
