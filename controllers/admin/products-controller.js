@@ -114,14 +114,27 @@ const editProduct = async (req, res) => {
 
     // Validate category if it's being updated
     if (category) {
-      const existingCategory = await Category.findOne({ name: { $regex: new RegExp('^' + category + '$', 'i') } });
+      // First try exact match
+      let existingCategory = await Category.findOne({ name: category });
+      
+      // If no exact match, try case-insensitive match
+      if (!existingCategory) {
+        existingCategory = await Category.findOne({
+          name: { $regex: new RegExp('^' + category.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '$', 'i') }
+        });
+      }
+
       if (!existingCategory) {
         const availableCategories = await Category.find({}).select('name -_id');
         return res.status(400).json({
           success: false,
-          message: `Invalid category. Please select from the predefined categories: ${availableCategories.map(c => c.name).join(', ')}.`,
+          message: `Invalid category '${category}'. Please select from the predefined categories: ${availableCategories.map(c => c.name).join(', ')}.`,
+          availableCategories: availableCategories.map(c => c.name)
         });
       }
+
+      // Use the exact name from the database to maintain consistency
+      category = existingCategory.name;
     }
 
     findProduct.title = title || findProduct.title;
