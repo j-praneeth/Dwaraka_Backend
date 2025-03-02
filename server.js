@@ -19,7 +19,7 @@ const shopCategoryRouter = require("./routes/shop/category-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const categoryController = require("./controllers/shop/category-controller"); // Import the category controller
+// const categoryController = require("./controllers/shop/category-controller"); // Import the category controller
 
 const app = express();
 const PORT = process.env.PORT || 5000;
