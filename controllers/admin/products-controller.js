@@ -112,17 +112,6 @@ const editProduct = async (req, res) => {
         message: "Product not found",
       });
 
-    // Validate category if it's being updated
-    if (category) {
-      const existingCategory = await Category.findOne({ name: category });
-      if (!existingCategory) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid category selected",
-        });
-      }
-    }
-
     findProduct.title = title || findProduct.title;
     findProduct.description = description || findProduct.description;
     findProduct.category = category || findProduct.category;
