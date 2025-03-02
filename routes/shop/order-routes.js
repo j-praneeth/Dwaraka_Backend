@@ -14,7 +14,8 @@ const {
   getAllReturnRequests,
   cancelReturnRequest,
   updateReturnStatus,
-  updateRefundStatus
+  updateRefundStatus,
+  cancelOrder
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
