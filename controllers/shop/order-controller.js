@@ -618,17 +618,31 @@ const updateRefundStatus = async (req, res) => {
   const { refundStatus } = req.body;
 
   try {
-    const order = await Order.findById(orderId);
+    // Validate refund status
+    if (!['Inprocess', 'Refunded', 'Failed'].includes(refundStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid refund status. Must be one of: Inprocess, Refunded, Failed",
+      });
+    }
+
+    // Find and update the order in one operation
+    const order = await Order.findOneAndUpdate(
+      { _id: orderId },
+      { refundStatus },
+      { 
+        new: true, // Return the updated document
+        runValidators: true // Run schema validators
+      }
+    ).populate('userId', 'userName email')
+     .populate('cartItems.productId', 'title image price salePrice');
+
     if (!order) {
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
-
-    // Update the refund status
-    order.refundStatus = refundStatus; // Assuming refundStatus is a field in your Order model
-    await order.save();
 
     res.status(200).json({
       success: true,
@@ -651,14 +665,19 @@ const getAllRefunds = async (req, res) => {
       .populate('userId', 'userName email')
       .populate('cartItems.productId', 'title image price salePrice');
 
-    if (!refunds.length) {
-      return res.status(404).json({ success: false, message: "No refunds found!" });
-    }
-
-    res.status(200).json({ success: true, data: refunds });
+    // Don't return 404 if no refunds found, just return an empty array
+    res.status(200).json({ 
+      success: true, 
+      data: refunds,
+      message: refunds.length ? "Refunds fetched successfully" : "No pending refunds found"
+    });
   } catch (error) {
     console.error('Error fetching refunds:', error);
-    res.status(500).json({ success: false, message: "Failed to fetch refunds" });
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch refunds",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 

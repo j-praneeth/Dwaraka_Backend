@@ -59,8 +59,8 @@ const OrderSchema = new mongoose.Schema({
   },
   refundStatus: {
     type: String,
-    enum: ['pending', 'completed', 'failed'],
-    default: 'pending'
+    enum: ['Inprocess', 'Refunded', 'Failed'],
+    default: 'Inprocess'
   }
 }, { timestamps: true });
 
