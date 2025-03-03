@@ -645,6 +645,23 @@ const updateRefundStatus = async (req, res) => {
   }
 };
 
+const getAllRefunds = async (req, res) => {
+  try {
+    const refunds = await Order.find({ refundStatus: "Inprocess" })
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
+
+    if (!refunds.length) {
+      return res.status(404).json({ success: false, message: "No refunds found!" });
+    }
+
+    res.status(200).json({ success: true, data: refunds });
+  } catch (error) {
+    console.error('Error fetching refunds:', error);
+    res.status(500).json({ success: false, message: "Failed to fetch refunds" });
+  }
+};
+
 module.exports = {
   createOrder,
   capturePayment,
@@ -657,5 +674,6 @@ module.exports = {
   getAllReturnRequests,
   cancelReturnRequest,
   updateReturnStatus,
-  updateRefundStatus
+  updateRefundStatus,
+  getAllRefunds
 };
