@@ -654,6 +654,11 @@ const updateRefundStatus = async (req, res) => {
 
     // Update refund status
     order.refundStatus = refundStatus;
+
+    // Optionally update order status if needed
+    if (refundStatus === 'Refunded') {
+      order.orderStatus = 'cancelled'; // Update order status to cancelled
+    }
     
     // Save the changes
     await order.save();
