@@ -656,16 +656,7 @@ const updateRefundStatus = async (req, res) => {
     order.refundStatus = refundStatus;
     
     // Save the changes
-    try {
-      await order.save();
-    } catch (saveError) {
-      console.error('Error saving order:', saveError);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to save refund status",
-        error: process.env.NODE_ENV === 'development' ? saveError.message : 'Internal server error',
-      });
-    }
+    await order.save();
 
     // Fetch the updated order with populated data
     const updatedOrder = await Order.findById(orderId)
