@@ -618,7 +618,9 @@ const updateRefundStatus = async (req, res) => {
   const { refundStatus } = req.body;
 
   try {
-    const order = await Order.findById(orderId);
+    // Find order and populate user data
+    const order = await Order.findById(orderId).populate('userId', 'userName email');
+    
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -626,10 +628,20 @@ const updateRefundStatus = async (req, res) => {
       });
     }
 
+    // Validate refund status
+    const validStatuses = ['Inprocess', 'Refunded', 'Failed'];
+    if (!validStatuses.includes(refundStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid refund status",
+      });
+    }
+
     // Update the refund status
-    order.refundStatus = refundStatus; // Assuming refundStatus is a field in your Order model
+    order.refundStatus = refundStatus;
     await order.save();
 
+    // Return populated order data
     res.status(200).json({
       success: true,
       message: "Refund status updated successfully",
