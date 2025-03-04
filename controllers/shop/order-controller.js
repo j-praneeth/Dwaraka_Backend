@@ -618,25 +618,17 @@ const updateRefundStatus = async (req, res) => {
   const { refundStatus } = req.body;
 
   try {
-    // Validate refund status
-    if (!['Inprocess', 'Refunded', 'Failed'].includes(refundStatus)) {
+    // Validate refundStatus
+    const validStatuses = ['Inprocess', 'Refunded', 'Failed'];
+    if (!validStatuses.includes(refundStatus)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid refund status. Must be one of: Inprocess, Refunded, Failed",
+        message: `Invalid refund status. Must be one of: ${validStatuses.join(', ')}`,
       });
     }
 
-    // Find and update the order in one operation
-    const order = await Order.findOneAndUpdate(
-      { _id: orderId },
-      { refundStatus },
-      { 
-        new: true, // Return the updated document
-        runValidators: true // Run schema validators
-      }
-    ).populate('userId', 'userName email')
-     .populate('cartItems.productId', 'title image price salePrice');
-
+    // Find and validate the order
+    const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -644,10 +636,34 @@ const updateRefundStatus = async (req, res) => {
       });
     }
 
+    // Check if the order is in a valid state for refund
+    if (order.refundStatus === 'Refunded') {
+      return res.status(400).json({
+        success: false,
+        message: "Order has already been refunded",
+      });
+    }
+
+    // Update the refund status
+    order.refundStatus = refundStatus;
+    
+    // If marking as refunded, update related fields
+    if (refundStatus === 'Refunded') {
+      order.orderStatus = 'returned';
+      order.orderUpdateDate = new Date();
+    }
+
+    await order.save();
+
+    // Return the updated order with populated fields
+    const updatedOrder = await Order.findById(orderId)
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
+
     res.status(200).json({
       success: true,
       message: "Refund status updated successfully",
-      data: order,
+      data: updatedOrder,
     });
   } catch (error) {
     console.error('Error updating refund status:', error);
@@ -661,15 +677,24 @@ const updateRefundStatus = async (req, res) => {
 
 const getAllRefunds = async (req, res) => {
   try {
+    // Find orders with refundStatus "Inprocess"
     const refunds = await Order.find({ refundStatus: "Inprocess" })
       .populate('userId', 'userName email')
-      .populate('cartItems.productId', 'title image price salePrice');
+      .populate('cartItems.productId', 'title image price salePrice')
+      .sort({ orderDate: -1 }); // Sort by order date, newest first
 
-    // Don't return 404 if no refunds found, just return an empty array
+    // Return empty array if no refunds found
+    if (!refunds.length) {
+      return res.status(200).json({ 
+        success: true, 
+        message: "No pending refunds found",
+        data: [] 
+      });
+    }
+
     res.status(200).json({ 
       success: true, 
-      data: refunds,
-      message: refunds.length ? "Refunds fetched successfully" : "No pending refunds found"
+      data: refunds 
     });
   } catch (error) {
     console.error('Error fetching refunds:', error);

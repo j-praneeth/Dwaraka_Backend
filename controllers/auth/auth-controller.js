@@ -171,74 +171,74 @@ const User = require("../../models/User");
 
 //register
 const registerUser = async (req, res) => {
-	const { userName, email, password } = req.body;
+  const { userName, email, password } = req.body;
 
-	try {
-		const checkUser = await User.findOne({ email });
-		if (checkUser)
+  try {
+    const checkUser = await User.findOne({ email });
+    if (checkUser)
 			return res.json({
-				success: false,
-				message: "User Already exists with the same email! Please try again",
-			});
+        success: false,
+        message: "User Already exists with the same email! Please try again",
+      });
 
-		const hashPassword = await bcrypt.hash(password, 12);
-		const newUser = new User({
-			userName,
-			email,
-			password: hashPassword,
-		});
+    const hashPassword = await bcrypt.hash(password, 12);
+    const newUser = new User({
+      userName,
+      email,
+      password: hashPassword,
+    });
 
-		await newUser.save();
-		res.status(200).json({
-			success: true,
-			message: "Registration successful",
-		});
-	} catch (e) {
-		console.log(e);
-		res.status(500).json({
-			success: false,
+    await newUser.save();
+    res.status(200).json({
+      success: true,
+      message: "Registration successful",
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
 			message: "Some error occured",
-		});
-	}
+    });
+  }
 };
 
 //login
 const loginUser = async (req, res) => {
-	const { email, password } = req.body;
+  const { email, password } = req.body;
 
-	try {
+  try {
 		const user = await User.findOne({ email: email.toLowerCase() });
 		if (!user) {
 			return res.status(404).json({
-				success: false,
-				message: "User doesn't exist! Please register first",
-			});
+        success: false,
+        message: "User doesn't exist! Please register first",
+      });
 		}
 
 		const isPasswordValid = await bcrypt.compare(password, user.password);
 		if (!isPasswordValid) {
-			return res.status(401).json({
-				success: false,
-				message: "Incorrect password! Please try again",
-			});
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect password! Please try again",
+      });
 		}
 
-		const token = jwt.sign(
-			{
+    const token = jwt.sign(
+      {
 				id: user._id,
 				role: user.role,
 				email: user.email,
 				userName: user.userName,
-			},
-			"CLIENT_SECRET_KEY",
-		);
+      },
+      "CLIENT_SECRET_KEY",
+    );
 
 		const { password: _, _id: id, ...userData } = user.toObject();
 
 		return res.status(200).json({
-			success: true,
+      success: true,
 			message: "Login successful",
-			user: {
+      user: {
 				id,
 				email: user.email,
 				role: user.role,
@@ -248,19 +248,19 @@ const loginUser = async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Login error:", error);
-		res.status(500).json({
-			success: false,
-			message: "Some error occurred",
-		});
-	}
+    res.status(500).json({
+      success: false,
+      message: "Some error occurred",
+    });
+  }
 };
 
 //logout
 const logoutUser = (req, res) => {
-	res.clearCookie("token").json({
-		success: true,
-		message: "Logged out successfully!",
-	});
+  res.clearCookie("token").json({
+    success: true,
+    message: "Logged out successfully!",
+  });
 };
 
 //auth middleware
@@ -272,12 +272,12 @@ const authMiddleware = (req, res, next) => {
 		return res.status(401).json({ success: false, message: "Unauthorized user!" });
 	}
 
-	try {
-		const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+  try {
+    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
 		console.log("Decoded Token:", decoded); // Log the decoded token
 		req.user = decoded; // Attach user info to the request
-		next();
-	} catch (error) {
+    next();
+  } catch (error) {
 		console.error("JWT Verification Error:", error); // Log the error
 		return res.status(401).json({ success: false, message: "Unauthorized user!" });
 	}
@@ -291,7 +291,7 @@ const resetPassword = async (req, res) => {
 		const user = await User.findOne({ email });
 		if (!user) {
 			return res.status(404).json({
-				success: false,
+      success: false,
 				message: "User not found. Please check the email provided.",
 			});
 		}
