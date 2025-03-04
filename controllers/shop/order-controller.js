@@ -618,16 +618,6 @@ const updateRefundStatus = async (req, res) => {
   const { refundStatus } = req.body;
 
   try {
-    // Validate refundStatus
-    const validStatuses = ['Inprocess', 'Refunded', 'Failed'];
-    if (!validStatuses.includes(refundStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid refund status. Must be one of: ${validStatuses.join(', ')}`,
-      });
-    }
-
-    // Find and validate the order
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({
@@ -636,34 +626,14 @@ const updateRefundStatus = async (req, res) => {
       });
     }
 
-    // Check if the order is in a valid state for refund
-    if (order.refundStatus === 'Refunded') {
-      return res.status(400).json({
-        success: false,
-        message: "Order has already been refunded",
-      });
-    }
-
     // Update the refund status
-    order.refundStatus = refundStatus;
-    
-    // If marking as refunded, update related fields
-    if (refundStatus === 'Refunded') {
-      order.orderStatus = 'returned';
-      order.orderUpdateDate = new Date();
-    }
-
+    order.refundStatus = refundStatus; // Assuming refundStatus is a field in your Order model
     await order.save();
-
-    // Return the updated order with populated fields
-    const updatedOrder = await Order.findById(orderId)
-      .populate('userId', 'userName email')
-      .populate('cartItems.productId', 'title image price salePrice');
 
     res.status(200).json({
       success: true,
       message: "Refund status updated successfully",
-      data: updatedOrder,
+      data: order,
     });
   } catch (error) {
     console.error('Error updating refund status:', error);
@@ -677,32 +647,18 @@ const updateRefundStatus = async (req, res) => {
 
 const getAllRefunds = async (req, res) => {
   try {
-    // Find orders with refundStatus "Inprocess"
     const refunds = await Order.find({ refundStatus: "Inprocess" })
       .populate('userId', 'userName email')
-      .populate('cartItems.productId', 'title image price salePrice')
-      .sort({ orderDate: -1 }); // Sort by order date, newest first
+      .populate('cartItems.productId', 'title image price salePrice');
 
-    // Return empty array if no refunds found
     if (!refunds.length) {
-      return res.status(200).json({ 
-        success: true, 
-        message: "No pending refunds found",
-        data: [] 
-      });
+      return res.status(404).json({ success: false, message: "No refunds found!" });
     }
 
-    res.status(200).json({ 
-      success: true, 
-      data: refunds 
-    });
+    res.status(200).json({ success: true, data: refunds });
   } catch (error) {
     console.error('Error fetching refunds:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to fetch refunds",
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch refunds" });
   }
 };
 
