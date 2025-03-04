@@ -619,10 +619,10 @@ const updateRefundStatus = async (req, res) => {
 
   try {
     // Input validation
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    if (!orderId) {
       return res.status(400).json({
         success: false,
-        message: "Invalid order ID format",
+        message: "Order ID is required",
       });
     }
 
@@ -642,7 +642,7 @@ const updateRefundStatus = async (req, res) => {
       });
     }
 
-    // Find the order
+    // Find and update the order
     const order = await Order.findById(orderId);
     
     if (!order) {
@@ -652,51 +652,12 @@ const updateRefundStatus = async (req, res) => {
       });
     }
 
-    // Check if order is eligible for refund
-    if (!['returned'].includes(order.orderStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: "Order must be returned before processing refund",
-      });
-    }
-
-    // Check if refund is already processed
-    if (order.refundStatus === 'Refunded') {
-      return res.status(400).json({
-        success: false,
-        message: "Refund has already been processed for this order",
-      });
-    }
-
-    // Update refund status and order status
+    // Update refund status
     order.refundStatus = refundStatus;
     
-    // If marking as refunded, update relevant timestamps
-    if (refundStatus === 'Refunded') {
-      order.orderUpdateDate = new Date();
-      if (order.returnRequest) {
-        order.returnRequest.processedDate = new Date();
-      }
-    }
-
     // Save the changes
     try {
-      const savedOrder = await order.save();
-      
-      // Fetch the complete order data with populated fields
-      const populatedOrder = await Order.findById(savedOrder._id)
-        .populate('userId', 'userName email')
-        .populate('cartItems.productId', 'title image price salePrice');
-
-      if (!populatedOrder) {
-        throw new Error('Failed to fetch updated order details');
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Refund status updated successfully",
-        data: populatedOrder,
-      });
+      await order.save();
     } catch (saveError) {
       console.error('Error saving order:', saveError);
       return res.status(500).json({
@@ -705,6 +666,17 @@ const updateRefundStatus = async (req, res) => {
         error: process.env.NODE_ENV === 'development' ? saveError.message : 'Internal server error',
       });
     }
+
+    // Fetch the updated order with populated data
+    const updatedOrder = await Order.findById(orderId)
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
+
+    res.status(200).json({
+      success: true,
+      message: "Refund status updated successfully",
+      data: updatedOrder,
+    });
   } catch (error) {
     console.error('Error updating refund status:', error);
     res.status(500).json({
