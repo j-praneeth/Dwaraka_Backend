@@ -618,13 +618,18 @@ const updateRefundStatus = async (req, res) => {
   const { refundStatus } = req.body;
 
   try {
-    // Find order and populate user data
-    const order = await Order.findById(orderId).populate('userId', 'userName email');
-    
-    if (!order) {
-      return res.status(404).json({
+    // Input validation
+    if (!orderId) {
+      return res.status(400).json({
         success: false,
-        message: "Order not found",
+        message: "Order ID is required",
+      });
+    }
+
+    if (!refundStatus) {
+      return res.status(400).json({
+        success: false,
+        message: "Refund status is required",
       });
     }
 
@@ -633,19 +638,44 @@ const updateRefundStatus = async (req, res) => {
     if (!validStatuses.includes(refundStatus)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid refund status",
+        message: `Invalid refund status. Must be one of: ${validStatuses.join(', ')}`,
       });
     }
 
-    // Update the refund status
-    order.refundStatus = refundStatus;
-    await order.save();
+    // Find and update the order
+    const order = await Order.findById(orderId);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    // Return populated order data
+    // Update refund status
+    order.refundStatus = refundStatus;
+    
+    // Save the changes
+    try {
+      await order.save();
+    } catch (saveError) {
+      console.error('Error saving order:', saveError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to save refund status",
+        error: process.env.NODE_ENV === 'development' ? saveError.message : 'Internal server error',
+      });
+    }
+
+    // Fetch the updated order with populated data
+    const updatedOrder = await Order.findById(orderId)
+      .populate('userId', 'userName email')
+      .populate('cartItems.productId', 'title image price salePrice');
+
     res.status(200).json({
       success: true,
       message: "Refund status updated successfully",
-      data: order,
+      data: updatedOrder,
     });
   } catch (error) {
     console.error('Error updating refund status:', error);
