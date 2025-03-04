@@ -685,18 +685,27 @@ const updateRefundStatus = async (req, res) => {
 
 const getAllRefunds = async (req, res) => {
   try {
-    const refunds = await Order.find({ refundStatus: "Inprocess" })
+    // Get all orders with a refundStatus
+    const refunds = await Order.find({ 
+      refundStatus: { $in: ["Inprocess", "Refunded", "Failed"] } 
+    })
       .populate('userId', 'userName email')
-      .populate('cartItems.productId', 'title image price salePrice');
+      .populate('cartItems.productId', 'title image price salePrice')
+      .sort({ orderDate: -1 }); // Sort by order date, newest first
 
-    if (!refunds.length) {
-      return res.status(404).json({ success: false, message: "No refunds found!" });
-    }
-
-    res.status(200).json({ success: true, data: refunds });
+    // Always return success, even with empty array
+    res.status(200).json({ 
+      success: true, 
+      data: refunds,
+      message: refunds.length ? "Refunds fetched successfully" : "No refunds found"
+    });
   } catch (error) {
     console.error('Error fetching refunds:', error);
-    res.status(500).json({ success: false, message: "Failed to fetch refunds" });
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch refunds",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 
