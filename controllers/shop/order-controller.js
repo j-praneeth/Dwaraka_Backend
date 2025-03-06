@@ -127,9 +127,9 @@ const createOrder = async (req, res) => {
 
     // Function to generate a custom Order ID
     const generateOrderId = () => {
-      const randomString = Math.random().toString(36).substring(2, 24); // Generate 12 random alphanumeric characters
+      const randomString = Math.random().toString().substring(2, 24); // Generate a string of 22 digits
       return `DH${randomString}`; // Prepend "DH" to the random string
-    };
+    };    
     
     // Create order in our database
     const moment = require('moment');
