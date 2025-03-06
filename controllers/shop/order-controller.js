@@ -724,6 +724,7 @@ const cancelOrder = async (req, res) => {
 
     // Update the order status to cancelled
     order.orderStatus = "cancelled";
+    order.refundStatus = "Inprocess"; // Set refund status to "In process"
     order.orderUpdateDate = new Date(); // Update the order update date
 
     await order.save();
