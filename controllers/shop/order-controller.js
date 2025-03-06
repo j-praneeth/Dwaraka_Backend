@@ -104,7 +104,29 @@ const createOrder = async (req, res) => {
       }
     }
 
+    // // Create order in our database
+    // const newOrder = new Order({
+    //   userId: userId,
+    //   cartId,
+    //   cartItems: cartItems.map(item => ({
+    //     productId: item.productId,
+    //     quantity: item.quantity,
+    //     price: Number(item.price),
+    //     title: item.title
+    //   })),
+    //   addressInfo,
+    //   orderStatus: "pending",
+    //   paymentMethod: "razorpay",
+    //   paymentStatus: "pending",
+    //   totalAmount,
+    //   orderDate: new Date(),
+    //   orderUpdateDate: new Date(),
+    // });
+
+    // await newOrder.save();
+
     // Create order in our database
+    const moment = require('moment');
     const newOrder = new Order({
       userId: userId,
       cartId,
@@ -119,8 +141,8 @@ const createOrder = async (req, res) => {
       paymentMethod: "razorpay",
       paymentStatus: "pending",
       totalAmount,
-      orderDate: new Date(),
-      orderUpdateDate: new Date(),
+      orderDate:  moment().format('DD-MM-YYYY, hh:mm A'),
+      orderUpdateDate: moment().format('DD-MM-YYYY, hh:mm A'),
     });
 
     await newOrder.save();
