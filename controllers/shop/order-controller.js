@@ -701,23 +701,47 @@ const getAllRefunds = async (req, res) => {
   }
 };
 
+const cancelOrder = async (req, res) => {
+  const { orderId } = req.params;
 
-// const getAllRefunds = async (req, res) => {
-//   try {
-//     const refunds = await Order.find({ refundStatus: "Inprocess" })
-//       .populate('userId', 'userName email')
-//       .populate('cartItems.productId', 'title image price salePrice');
+  try {
+    // Find the order by ID
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-//     if (!refunds.length) {
-//       return res.status(404).json({ success: false, message: "No refunds found!" });
-//     }
+    // Check if the order can be cancelled
+    if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Order is already cancelled",
+      });
+    }
 
-//     res.status(200).json({ success: true, data: refunds });
-//   } catch (error) {
-//     console.error('Error fetching refunds:', error);
-//     res.status(500).json({ success: false, message: "Failed to fetch refunds" });
-//   }
-// };
+    // Update the order status to cancelled
+    order.orderStatus = "cancelled";
+    order.orderUpdateDate = new Date(); // Update the order update date
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: order,
+    });
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel order",
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
 
 module.exports = {
   createOrder,
@@ -732,5 +756,6 @@ module.exports = {
   cancelReturnRequest,
   updateReturnStatus,
   updateRefundStatus,
-  getAllRefunds
+  getAllRefunds,
+  cancelOrder
 };

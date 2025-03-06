@@ -15,7 +15,8 @@ const {
   cancelReturnRequest,
   updateReturnStatus,
   updateRefundStatus,
-  getAllRefunds
+  getAllRefunds,
+  cancelOrder
 } = require("../../controllers/shop/order-controller");
 
 const router = express.Router();
@@ -27,6 +28,9 @@ router.post("/create", createOrder);
 router.post("/capture", capturePayment);
 router.get("/user/:userId", getAllOrdersByUser);
 router.get("/details/:id", getOrderDetails);
+
+// New route for cancelling an order
+router.put("/cancel/:orderId", cancelOrder);
 
 // New route for fetching all return requests
 router.get("/returns", getAllReturnRequests);
