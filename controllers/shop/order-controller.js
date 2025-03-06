@@ -752,6 +752,15 @@ const cancelOrder = async (req, res) => {
       });
     }
 
+    // Restore stock for each product in the canceled order
+    await Promise.all(order.cartItems.map(async (item) => {
+      const product = await Product.findById(item.productId);
+      if (product) {
+        product.totalStock += item.quantity; // Restore stock count
+        await product.save();
+      }
+    }));
+
     // Update the order status to cancelled
     order.orderStatus = "cancelled";
     order.refundStatus = "Inprocess"; // Set refund status to "In process"
