@@ -125,9 +125,16 @@ const createOrder = async (req, res) => {
 
     // await newOrder.save();
 
+    // Function to generate a custom Order ID
+    const generateOrderId = () => {
+      const randomString = Math.random().toString(36).substring(2, 24); // Generate 12 random alphanumeric characters
+      return `DH${randomString}`; // Prepend "DH" to the random string
+    };
+    
     // Create order in our database
     const moment = require('moment');
     const newOrder = new Order({
+      _id: generateOrderId(), // Set the custom ID
       userId: userId,
       cartId,
       cartItems: cartItems.map(item => ({
@@ -154,17 +161,18 @@ const createOrder = async (req, res) => {
       receipt: `order_rcpt_${Date.now()}`
     });
 
+    // Return response with the new order ID
     res.status(201).json({
       success: true,
       data: {
-        orderId: newOrder._id,
-        razorpayOrderId: razorpayOrder.id,  // This is needed for payment
+        orderId: newOrder._id, // This is the generated Order ID
+        razorpayOrderId: razorpayOrder.id,
         amount: razorpayOrder.amount,
         keyId: process.env.RAZORPAY_KEY_ID
       }
     });
   } catch (error) {
-    console.error('Order creation error:', error);
+    console.error('Error creating order:', error);
     res.status(500).json({
       success: false,
       message: "Failed to create order",
