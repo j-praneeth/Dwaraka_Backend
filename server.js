@@ -15,7 +15,7 @@ const shopOrderRouter = require("./routes/shop/order-routes");
 const shopSearchRouter = require("./routes/shop/search-routes");
 const shopReviewRouter = require("./routes/shop/review-routes");
 const shopCategoryRouter = require("./routes/shop/category-routes");
-const shopSizeRouter = require("./routes/shop/size-routes");
+const shopSizeRouter = require("./routes/shop/size-routes"); // Import the size router
 
 const commonFeatureRouter = require("./routes/common/feature-routes");
 const helmet = require('helmet');
@@ -73,9 +73,12 @@ app.use("/api/shop/order", shopOrderRouter);
 app.use("/api/shop/search", shopSearchRouter);
 app.use("/api/shop/review", shopReviewRouter);
 app.use("/api/shop/category", shopCategoryRouter);
-app.use("/api/shop/size", shopSizeRouter);
+app.use("/api/shop/size", shopSizeRouter); // Use the size router
 
 app.use("/api/common/feature", commonFeatureRouter);
+
+// Call the function to create default categories if needed
+categoryController.createDefaultCategories();
 
 // Connect to MongoDB and start server
 const startServer = async () => {
