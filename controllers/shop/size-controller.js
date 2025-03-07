@@ -4,14 +4,16 @@ const getSizesByCategory = async (req, res) => {
   const { category, productId } = req.params;
 
   const sizeOptions = {
-    silk: ["Free Size"],
-    handloom: ["Free Size"],
-    cottonSarees: ["Free Size"],
-    fancy: ["Free Size"],
+    silk: ["-"],
+    handlooms: ["-"],
+    "cotton sarees": ["-"],
+    fancy: ["-"],
     tops: ["M", "L", "XL", "XXL"],
   };
 
-  const sizes = sizeOptions[category.toLowerCase()] || [];
+  const normalizedCategory = category.toLowerCase();
+
+  const sizes = sizeOptions[normalizedCategory] || [];
 
   // If a product ID is provided, fetch the product to get its existing sizes
   if (productId) {
