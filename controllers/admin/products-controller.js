@@ -102,6 +102,7 @@ const editProduct = async (req, res) => {
       salePrice,
       totalStock,
       averageReview,
+      sizes, // Include sizes in the request body
     } = req.body;
 
     let findProduct = await Product.findById(id);
@@ -110,7 +111,6 @@ const editProduct = async (req, res) => {
         success: false,
         message: "Product not found",
       });
-
     }
 
     // Fetch category name using ID
@@ -123,6 +123,7 @@ const editProduct = async (req, res) => {
       categoryName = categoryData.name; // Store category name
     }
 
+    // Update product fields
     findProduct.title = title || findProduct.title;
     findProduct.description = description || findProduct.description;
     findProduct.category = categoryName; // Store name instead of ID
@@ -134,6 +135,7 @@ const editProduct = async (req, res) => {
     findProduct.totalStock = totalStock || findProduct.totalStock;
     findProduct.image = image || findProduct.image;
     findProduct.averageReview = averageReview || findProduct.averageReview;
+    findProduct.sizes = sizes || findProduct.sizes; // Update sizes
 
     await findProduct.save();
     res.status(200).json({
