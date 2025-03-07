@@ -52,6 +52,7 @@ const addProduct = async (req, res) => {
       title,
       description,
       category: categoryData.name,
+      categoryId: category,
       brand,
       price,
       salePrice,
@@ -99,30 +100,32 @@ const editProduct = async (req, res) => {
       });
     }
 
-    let categoryName = findProduct.category;
-    if (category) {
-      const categoryData = await Category.findById(category);
-      if (!categoryData) {
-        return res.status(404).json({ success: false, message: "Category not found" });
-      }
-      categoryName = categoryData.name;
+    const categoryData = await Category.findById(category);
+    if (!categoryData) {
+      return res.status(404).json({ success: false, message: "Category not found" });
     }
 
-    findProduct.title = title || findProduct.title;
-    findProduct.description = description || findProduct.description;
-    findProduct.category = categoryName;
-    findProduct.brand = brand || findProduct.brand;
-    findProduct.price = Number(price) || findProduct.price;
-    findProduct.salePrice = Number(salePrice) || findProduct.salePrice;
-    findProduct.totalStock = Number(totalStock) || findProduct.totalStock;
-    findProduct.image = image || findProduct.image;
-    findProduct.averageReview = Number(averageReview) || findProduct.averageReview;
-    findProduct.sizes = sizes || findProduct.sizes;
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      {
+        image,
+        title,
+        description,
+        category: categoryData.name,
+        categoryId: category,
+        brand,
+        price,
+        salePrice,
+        totalStock,
+        averageReview,
+        sizes: sizes || [],
+      },
+      { new: true }
+    );
 
-    await findProduct.save();
     res.status(200).json({
       success: true,
-      data: findProduct,
+      data: updatedProduct,
     });
   } catch (e) {
     console.error("Error editing product:", e);
