@@ -42,7 +42,15 @@ const addProduct = async (req, res) => {
       return res.status(400).json({ success: false, message: "Category is required" });
     }
 
-    const categoryData = await Category.findById(category);
+    let categoryData;
+    // Try to find category by name first
+    categoryData = await Category.findOne({ name: category });
+    
+    // If not found by name, try to find by ID
+    if (!categoryData && mongoose.Types.ObjectId.isValid(category)) {
+      categoryData = await Category.findById(category);
+    }
+
     if (!categoryData) {
       return res.status(404).json({ success: false, message: "Category not found" });
     }
@@ -52,7 +60,7 @@ const addProduct = async (req, res) => {
       title,
       description,
       category: categoryData.name,
-      categoryId: category,
+      categoryId: categoryData._id,
       brand,
       price,
       salePrice,
