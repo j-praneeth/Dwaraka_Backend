@@ -141,7 +141,8 @@ const createOrder = async (req, res) => {
         productId: item.productId,
         quantity: item.quantity,
         price: Number(item.price),
-        title: item.title
+        title: item.title,
+        size: item.size,
       })),
       addressInfo,
       orderStatus: "pending",
