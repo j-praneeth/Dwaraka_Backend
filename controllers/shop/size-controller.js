@@ -4,11 +4,11 @@ const getSizesByCategory = async (req, res) => {
   const { category, productId } = req.params;
 
   const sizeOptions = {
-    Silk: ["Free Size"],
-    Handloom: ["Free Size"],
-    CottonSarees: ["Free Size"],
-    Fancy: ["Free Size"],
-    Tops: ["M", "L", "XL", "XXL"],
+    silk: ["Free Size"],
+    handloom: ["Free Size"],
+    cottonSarees: ["Free Size"],
+    fancy: ["Free Size"],
+    tops: ["M", "L", "XL", "XXL"],
   };
 
   const sizes = sizeOptions[category.toLowerCase()] || [];
