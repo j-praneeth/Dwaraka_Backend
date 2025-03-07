@@ -11,7 +11,7 @@ const getSizesByCategory = async (req, res) => {
     tops: ["M", "L", "XL", "XXL"],
   };
 
-  const normalizedCategory = category.toLowerCase();
+  const normalizedCategory = category.toLowerCase().replace(/%20/g, ' ').trim();
 
   const sizes = sizeOptions[normalizedCategory] || [];
 
@@ -32,6 +32,7 @@ const getSizesByCategory = async (req, res) => {
         });
       }
     } catch (error) {
+      console.error("Error fetching product sizes:", error);
       return res.status(500).json({
         success: false,
         message: "Error fetching product sizes.",
