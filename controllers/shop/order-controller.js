@@ -286,7 +286,7 @@ const getAllOrdersByUser = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: 'cartItems.productId',
-        select: 'title image price salePrice'
+        select: 'title images price salePrice'
       });
 
     if (!orders.length) {
@@ -303,7 +303,7 @@ const getAllOrdersByUser = async (req, res) => {
         ...item,
         product: {
           title: item.productId?.title || item.title,
-          image: item.productId?.image || '',
+          images: item.productId?.images || [],
           price: item.productId?.price || item.price,
           salePrice: item.productId?.salePrice || 0
         }
