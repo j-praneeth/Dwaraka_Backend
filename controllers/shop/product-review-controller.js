@@ -84,4 +84,29 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-module.exports = { addProductReview, getProductReviews };
+const getOrderReviews = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const review = await ProductReview.findOne({ orderId });
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: review
+    });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({
+      success: false,
+      message: "Error"
+    });
+  }
+};
+
+module.exports = { addProductReview, getProductReviews, getOrderReviews };
