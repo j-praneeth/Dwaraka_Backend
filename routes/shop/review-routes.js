@@ -7,7 +7,7 @@ const {
 
 const router = express.Router();
 
-router.post("/add", addProductReview);
+router.post("/:orderId/add", addProductReview);
 router.get("/:productId", getProductReviews);
 
 module.exports = router;
