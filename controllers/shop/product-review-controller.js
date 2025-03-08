@@ -4,10 +4,11 @@ const ProductReview = require("../../models/Review");
 
 const addProductReview = async (req, res) => {
   try {
-    const { productId, userId, userName, reviewMessage, reviewValue } =
+    const { productId, userId, userName, reviewMessage, reviewValue, orderId } =
       req.body;
 
     const order = await Order.findOne({
+      _id: orderId,
       userId,
       "cartItems.productId": productId,
       // orderStatus: "confirmed" || "delivered",
@@ -20,15 +21,16 @@ const addProductReview = async (req, res) => {
       });
     }
 
-    const checkExistinfReview = await ProductReview.findOne({
+    const checkExistingReview = await ProductReview.findOne({
       productId,
       userId,
+      orderId,
     });
 
-    if (checkExistinfReview) {
+    if (checkExistingReview) {
       return res.status(400).json({
         success: false,
-        message: "You already reviewed this product!",
+        message: "You already reviewed this product for this order!",
       });
     }
 
@@ -38,6 +40,7 @@ const addProductReview = async (req, res) => {
       userName,
       reviewMessage,
       reviewValue,
+      orderId,
     });
 
     await newReview.save();
