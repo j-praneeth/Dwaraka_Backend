@@ -7,6 +7,7 @@ const ProductReviewSchema = new mongoose.Schema(
     userName: String,
     reviewMessage: String,
     reviewValue: Number,
+    orderId: String,
   },
   { timestamps: true }
 );
