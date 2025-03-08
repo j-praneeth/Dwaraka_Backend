@@ -25,14 +25,21 @@ const createDefaultCategories = async (req, res) => {
         console.log(`Category already exists: ${categoryName}`);
       }
     }
-    res.status(200).json({ success: true, message: "Default categories ensured" });
+    
+    if (res) {
+      res.status(200).json({ success: true, message: "Default categories ensured" });
+    }
+    return { success: true, message: "Default categories ensured" };
   } catch (error) {
     console.error('Error creating categories:', error);
-    res.status(500).json({ success: false, message: "Failed to create categories", error: error.message });
+    if (res) {
+      res.status(500).json({ success: false, message: "Failed to create categories", error: error.message });
+    }
+    throw error;
   }
 };
 
 module.exports = {
   fetchCategories,
   createDefaultCategories,
-}; 
+};
