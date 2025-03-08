@@ -88,18 +88,18 @@ const getOrderReviews = async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    const review = await ProductReview.findOne({ orderId });
-    if (!review) {
+    const reviews = await ProductReview.find({ orderId });
+    if (!reviews || reviews.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Review not found"
+        message: "No reviews found for this order",
       });
     }
-
     res.status(200).json({
       success: true,
-      data: review
+      data: reviews,
     });
+
   } catch (e) {
     console.log(e);
     res.status(500).json({
