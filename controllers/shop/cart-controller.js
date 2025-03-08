@@ -3,12 +3,12 @@ const Product = require("../../models/Product");
 
 const addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    const { userId, productId, quantity, size } = req.body;
 
-    if (!userId || !productId || quantity <= 0) {
+    if (!userId || !productId || quantity <= 0 || !size) {
       return res.status(400).json({
         success: false,
-        message: "Invalid data provided!",
+        message: "Invalid data provided! Please include userId, productId, quantity, and size",
       });
     }
 
@@ -28,11 +28,11 @@ const addToCart = async (req, res) => {
     }
 
     const findCurrentProductIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId
+      (item) => item.productId.toString() === productId && item.size === size
     );
 
     if (findCurrentProductIndex === -1) {
-      cart.items.push({ productId, quantity });
+      cart.items.push({ productId, quantity, size });
     } else {
       cart.items[findCurrentProductIndex].quantity += quantity;
     }
