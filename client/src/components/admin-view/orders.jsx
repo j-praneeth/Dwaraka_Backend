@@ -70,8 +70,8 @@ function AdminOrdersView() {
             <option value="rejected">Rejected</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
-            <option value="inShipping">In Shipping</option>
-            <option value="inProcess">In Process</option>
+            <option value="inShipping">InShipping</option>
+            <option value="inProcess">InProcess</option>
           </select>
           <input
             type="text"
